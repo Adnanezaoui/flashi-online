@@ -19,6 +19,7 @@
     .game-canvas img { width:100%; height:100%; object-fit:cover; }
     .btn { padding:10px 25px; border-radius:40px; border:none; font-size:18px; background:#fdca40; cursor:pointer; margin:5px; }
     .score-board { margin-top:20px; background:#0d3a47; padding:15px; border-radius:20px; }
+    ul { list-style:none; padding:0; text-align:right; }
 </style>
 </head>
 <body>
@@ -38,19 +39,22 @@
     <div style="margin:20px;">
         <button id="startGameBtn" class="btn">▶️ بدء اللعبة (للأدمن فقط)</button>
     </div>
+
     <div class="game-wrapper">
         <div class="game-info">
             <div>⏳ وقت الجولة: <span id="timer">15</span> ثانية</div>
             <div>🏆 نقاطك: <span id="playerScore">0</span></div>
             <div>🔢 جولة: <span id="currentRound">1</span></div>
+            <div>👥 اللاعبين الحاليين:</div>
+            <ul id="currentPlayers"></ul>
         </div>
         <div>
             <div class="game-canvas"><img id="leftImage" src="" alt="صورة أ"></div>
             <div class="game-canvas"><img id="rightImage" src="" alt="صورة ب"></div>
         </div>
         <div class="leaderboard">
-            <h3>🏅 ترتيب اللاعبين</h3>
-            <ul id="leaderboardList" style="list-style:none; padding:0;"></ul>
+            <h3>🏅 ترتيب الجولة</h3>
+            <ul id="leaderboardList"></ul>
         </div>
     </div>
     <div id="roundResults" class="score-board" style="display:none;"></div>
@@ -63,7 +67,6 @@
 let players = {}; // كل لاعب: name -> score
 let playerName = '';
 let isAdmin = false;
-const ADMIN_PASSWORD = "POLO FAMILY";
 
 let totalRounds = 50;
 let currentRound = 0;
@@ -72,7 +75,6 @@ let roundInterval = null;
 let waitingTimeout = null;
 
 let images = [
-    // صور حقيقية من الإنترنت
     { left:"https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&h=300", right:"https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&h=300" },
     { left:"https://images.unsplash.com/photo-1526481280696-3f671bf5f0a2?auto=format&fit=crop&w=400&h=300", right:"https://images.unsplash.com/photo-1526481280696-3f671bf5f0a2?auto=format&fit=crop&w=400&h=300" },
     { left:"https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=400&h=300", right:"https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=400&h=300" },
@@ -87,15 +89,26 @@ function login() {
     const name = document.getElementById('playerNameInputLogin').value.trim();
     const password = document.getElementById('passwordInputLogin').value.trim();
     const errorP = document.getElementById('loginError');
-    if(password !== ADMIN_PASSWORD) { errorP.innerText="❌ كلمة المرور غير صحيحة"; return; }
+    if(password !== "POLO FAMILY") { errorP.innerText="❌ كلمة المرور غير صحيحة"; return; }
     if(name==='') { errorP.innerText="❌ الرجاء إدخال الاسم"; return; }
 
     playerName = name;
-    players[playerName] = 0;
+    if(!players[playerName]) players[playerName] = 0; // تسجيل اللاعب
+    updateCurrentPlayers();
+
     document.getElementById('playerNameDisplay').innerText = playerName;
 
     document.getElementById('loginPage').style.display='none';
     document.getElementById('gamePage').style.display='block';
+}
+
+// تحديث قائمة اللاعبين الحاليين
+function updateCurrentPlayers() {
+    let list = document.getElementById('currentPlayers');
+    list.innerHTML = '';
+    Object.keys(players).forEach(p=>{
+        list.innerHTML += `<li>${p}</li>`;
+    });
 }
 
 // ------------------------------------------------------
@@ -112,8 +125,8 @@ document.getElementById('startGameBtn').addEventListener('click', function(){
 function nextRound(){
     document.getElementById('roundResults').style.display='none';
     currentRound++;
-    if(currentRound>totalRounds){ alert("انتهت اللعبة!"); return; }
     document.getElementById('currentRound').innerText = currentRound;
+
     let imgIndex = Math.floor(Math.random()*images.length);
     document.getElementById('leftImage').src = images[imgIndex].left;
     document.getElementById('rightImage').src = images[imgIndex].right;
@@ -136,26 +149,27 @@ function nextRound(){
 // انتهاء الجولة وعرض النتائج
 // ------------------------------------------------------
 function endRound(){
-    // زيادة النقاط عشوائياً لكل لاعب كمثال (يمكن استبداله بالنقر على الاختلافات)
+    // زيادة النقاط لكل لاعب بشكل عشوائي (يمكن استبداله بنظام النقر على الاختلاف)
     for(let p in players){
-        players[p] += Math.floor(Math.random()*10); // نقاط عشوائية مؤقتة
+        players[p] += Math.floor(Math.random()*10+1);
     }
 
     // ترتيب اللاعبين
     let leaderboardArr = Object.keys(players).map(name=>({name:name, score:players[name]}));
     leaderboardArr.sort((a,b)=>b.score-a.score);
 
-    let html='';
+    // عرض النتائج للجميع بعد الجولة
+    let resultsDiv = document.getElementById('roundResults');
+    let html=`<h3>🏆 نتائج الجولة ${currentRound}</h3>`;
     leaderboardArr.forEach((pl,i)=>{
         html += `${i+1}. ${pl.name} - ${pl.score} نقاط<br>`;
     });
-    let resultsDiv = document.getElementById('roundResults');
-    resultsDiv.innerHTML = `<h3>🏆 نتائج الجولة ${currentRound}</h3>${html}`;
+    resultsDiv.innerHTML = html;
     resultsDiv.style.display='block';
 
     // تحديث اللوحة الجانبية
     let lbHtml='';
-    leaderboardArr.forEach((pl,i)=>{
+    leaderboardArr.forEach(pl=>{
         lbHtml += `<li>${pl.name} - ${pl.score}</li>`;
     });
     document.getElementById('leaderboardList').innerHTML = lbHtml;
