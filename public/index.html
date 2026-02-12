@@ -1,195 +1,213 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لعبة اختلاف الصور - البطولة الاحترافية</title>
-    <style>
-        /* (your existing styles unchanged — omitted here for brevity) */
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لعبة اختلاف الصور - البطولة الاحترافية</title>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Cairo','Segoe UI',sans-serif; }
+    body { background: linear-gradient(145deg,#0a1c23 0%,#06242e 100%); display:flex; justify-content:center; align-items:center; min-height:100vh; padding:15px; }
+    .game-wrapper { max-width:1600px; width:100%; display:flex; gap:20px; flex-wrap:wrap; justify-content:center; }
+    .main-game { flex:2; min-width:700px; background:#1f5568; border-radius:60px 60px 40px 40px; padding:30px 25px; box-shadow:0 25px 35px rgba(0,0,0,0.7); border:3px solid #6ec3d4; }
+    .sidebar { flex:1; min-width:350px; display:flex; flex-direction:column; gap:20px; }
+    /* ... (keep your other styles as before) ... */
+</style>
 </head>
 <body>
 
 <!-- POLO Login -->
 <div id="poloLoginPage" style="text-align:center; color:white;">
     <h1 style="font-size:60px; margin-bottom:30px;">🔥 POLO 🔥</h1>
-    <input type="text" id="poloPlayerName" placeholder="أدخل اسمك" style="..."><br>
-    <input type="password" id="poloPassword" placeholder="كلمة المرور" style="..."><br><br>
-    <button onclick="enterPolo()" style="...">دخول</button>
+    <input type="text" id="poloPlayerName" placeholder="أدخل اسمك" style="padding:15px 25px; border-radius:40px; border:none; font-size:18px; margin-bottom:15px; width:250px;"><br>
+    <input type="password" id="poloPassword" placeholder="كلمة المرور" style="padding:15px 25px; border-radius:40px; border:none; font-size:18px; width:250px;"><br><br>
+    <button id="poloEnterBtn" style="padding:15px 40px; border-radius:40px; border:none; font-size:20px; background:#fecb57; cursor:pointer;">دخول</button>
     <p id="poloError" style="color:red; margin-top:15px;"></p>
 </div>
 
 <!-- Main Game -->
 <div class="game-wrapper" id="mainGame" style="display:none;">
-    <!-- (your full game HTML structure as before) -->
+    <!-- اللعبة الرئيسية -->
+    <div class="main-game">
+        <div class="flashi-header">
+            <div class="logo">🎯 اختلاف الصور <span>Flashi</span></div>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <span id="gameStatusBadge" class="game-status status-active">🟢 نشط</span>
+                <span class="room-code" id="roomCodeDisplay"></span>
+            </div>
+        </div>
+        <div class="player-panel">
+            <div class="name-field">
+                <span style="font-size:28px;">👤</span>
+                <input type="text" id="playerNameInput" placeholder="أدخل اسمك" value="زائر">
+            </div>
+            <button id="enterGameBtn" class="btn">🚪 دخول</button>
+        </div>
+        <div class="game-info">
+            <span>👥 الزائرين: <span id="visitorCount">1</span></span>
+            <span>🎮 صورة: <span id="imageCounter">1/200</span></span>
+            <span>⭐ نقاطك: <span id="playerTotalScore">0</span></span>
+        </div>
+        <div class="images-row">
+            <div class="img-holder">
+                <p>🖼️ الصورة أ</p>
+                <div class="game-canvas"><img id="leftImage" src="" alt="Left Image"></div>
+            </div>
+            <div class="img-holder">
+                <p>🖼️ الصورة ب</p>
+                <div class="game-canvas"><img id="rightImage" src="" alt="Right Image"></div>
+            </div>
+        </div>
+        <div class="score-timer">
+            <div class="score-box"><span>🏆</span> <span id="scoreDisplay">0</span></div>
+            <div class="timer-box"><span>⏳</span> <span id="timerDisplay">0:20</span></div>
+            <div class="players-count"><span>🎯</span> <span id="differencesLeft">5</span></div>
+        </div>
+        <div id="messageBox" class="message-area">⏰ يرجى الانتظار يا <span id="playerNameSpan">زائر</span> حتى تبدأ الجولة القادمة</div>
+    </div>
+    <!-- الشريط الجانبي ... يمكنك وضع الشيفرة كما في النسخة الأصلية -->
 </div>
 
 <script>
     // ------------------------------------------------------
-    // Variables & Game Setup
+    // المتغيرات
     // ------------------------------------------------------
     let playerName = "زائر";
     let currentScore = 0, totalScore = 0, timeSeconds = 20;
     let gameActive = false, gamePaused = false;
     let foundDiffCount = 0, currentLevel = 0;
     let timerIntervalId = null, nextRoundTimeout = null;
+
     const levels = generateImageUrls();
     const TOTAL_IMAGES = levels.length;
 
-    // DOM Elements
-    const leftImage = document.getElementById('leftImage'),
-          rightImage = document.getElementById('rightImage'),
-          nameInput = document.getElementById('playerNameInput'),
-          enterBtn = document.getElementById('enterGameBtn'),
-          scoreSpan = document.getElementById('scoreDisplay'),
-          timerSpan = document.getElementById('timerDisplay'),
-          messageDiv = document.getElementById('messageBox'),
-          playerNameSpan = document.getElementById('playerNameSpan'),
-          imageCounter = document.getElementById('imageCounter'),
-          differencesLeftSpan = document.getElementById('differencesLeft'),
-          playerTotalScoreSpan = document.getElementById('playerTotalScore'),
-          visitorCountSpan = document.getElementById('visitorCount'),
-          onlineCountSpan = document.getElementById('onlineCount'),
-          leaderboardList = document.getElementById('leaderboardList'),
-          gameStatusBadge = document.getElementById('gameStatusBadge'),
-          roomCodeDisplay = document.getElementById('roomCodeDisplay');
+    // عناصر DOM
+    const leftImage = document.getElementById('leftImage');
+    const rightImage = document.getElementById('rightImage');
+    const nameInput = document.getElementById('playerNameInput');
+    const enterBtn = document.getElementById('enterGameBtn');
+    const scoreSpan = document.getElementById('scoreDisplay');
+    const timerSpan = document.getElementById('timerDisplay');
+    const messageDiv = document.getElementById('messageBox');
+    const playerNameSpan = document.getElementById('playerNameSpan');
+    const imageCounter = document.getElementById('imageCounter');
+    const differencesLeftSpan = document.getElementById('differencesLeft');
+    const playerTotalScoreSpan = document.getElementById('playerTotalScore');
+    const visitorCountSpan = document.getElementById('visitorCount');
+    const roomCodeDisplay = document.getElementById('roomCodeDisplay');
 
-    const adminPasswordInput = document.getElementById('adminPasswordInput'),
-          adminLoginBtn = document.getElementById('adminLoginBtn'),
-          adminControls = document.getElementById('adminControls'),
-          pauseGameBtn = document.getElementById('pauseGameBtn'),
-          resumeGameBtn = document.getElementById('resumeGameBtn'),
-          nextImageBtn = document.getElementById('nextImageBtn'),
-          resetGameBtn = document.getElementById('resetGameBtn'),
-          randomImageBtn = document.getElementById('randomImageBtn');
-
-    const chatMessagesDiv = document.getElementById('chatMessages'),
-          chatInput = document.getElementById('chatInput'),
-          sendChatBtn = document.getElementById('sendChatBtn'),
-          adminChatBadge = document.getElementById('adminChatBadge');
-
-    let visitors = [];
-
-    roomCodeDisplay.innerText = "غرفة " + Math.floor(Math.random() * 9000 + 1000);
+    roomCodeDisplay.innerText = "غرفة " + Math.floor(Math.random()*9000+1000);
 
     // ------------------------------------------------------
-    // Game Functions (same as before, no eval!)
+    // وظائف اللعبة
     // ------------------------------------------------------
-
     function generateImageUrls() {
         const urls = [];
         const baseUrls = [
             "https://i.pinimg.com/736x/e3/43/2c/e3432cfb9c3e3b0f6c0c7a3e0e3c0b0c.jpg",
             "https://i.pinimg.com/736x/8a/1b/4c/8a1b4c0b3a5f2d1e6c7a8b9c0d1e2f3a.jpg"
-            // etc...
         ];
-        for (let i = 0; i < 200; i++) {
-            const diffCount = i < 50 ? 5 : (i < 120 ? 6 : 7);
+        for(let i=0;i<200;i++){
+            const diffCount = i<50?5:(i<120?6:7);
             urls.push({
-                id: i + 1,
-                leftImage: baseUrls[i % baseUrls.length],
-                rightImage: baseUrls[i % baseUrls.length],
+                id:i+1,
+                leftImage:baseUrls[i%baseUrls.length],
+                rightImage:baseUrls[i%baseUrls.length],
                 differencesCount: diffCount,
-                differences: generateDifferences(diffCount, i)
+                differences: generateDifferences(diffCount,i)
             });
         }
         return urls;
     }
 
-    function generateDifferences(count, seed) {
-        const diffs = [], positions = [
-            [0.15, 0.20], [0.45, 0.35], [0.70, 0.55]
-        ];
-        for (let i = 0; i < count; i++) {
-            const pos = positions[i % positions.length];
-            diffs.push({ x: pos[0], y: pos[1], r: 12, found: false });
+    function generateDifferences(count, seed){
+        const diffs = [], positions=[[0.15,0.20],[0.45,0.35],[0.70,0.55]];
+        for(let i=0;i<count;i++){
+            const pos=positions[i%positions.length];
+            diffs.push({x:pos[0],y:pos[1],r:12,found:false});
         }
         return diffs;
     }
 
-    function loadLevel(levelIndex) {
-        if (!gameActive || gamePaused) return;
-        currentLevel = levelIndex % TOTAL_IMAGES;
+    function loadLevel(levelIndex){
+        currentLevel = levelIndex%TOTAL_IMAGES;
         const level = levels[currentLevel];
-        imageCounter.innerText = `${currentLevel+1}/${TOTAL_IMAGES}`;
-        leftImage.src = level.leftImage;
-        rightImage.src = level.rightImage;
-        foundDiffCount = 0;
-        differencesLeftSpan.innerText = level.differencesCount;
+        imageCounter.innerText=`${currentLevel+1}/${TOTAL_IMAGES}`;
+        leftImage.src=level.leftImage;
+        rightImage.src=level.rightImage;
+        foundDiffCount=0;
+        differencesLeftSpan.innerText=level.differencesCount;
     }
 
-    function startTimer() {
+    function startTimer(){
         clearInterval(timerIntervalId);
-        timeSeconds = 20;
-        timerIntervalId = setInterval(() => {
-            if (!gamePaused && gameActive) {
+        timeSeconds=20;
+        timerIntervalId=setInterval(()=>{
+            if(gameActive&&!gamePaused){
                 timeSeconds--;
-                timerSpan.innerText = `0:${timeSeconds < 10 ? "0" : ""}${timeSeconds}`;
-                if (timeSeconds <= 0) endLevel(false);
+                timerSpan.innerText=`0:${timeSeconds<10?'0':''}${timeSeconds}`;
+                if(timeSeconds<=0) endLevel(false);
             }
-        }, 1000);
+        },1000);
     }
 
-    function startGame() {
-        const name = nameInput.value.trim();
-        if (!name) return alert('❌ اسم اللاعب لا يمكن أن يكون فارغاً');
-        playerName = name;
-        playerNameSpan.innerText = name;
-        gameActive = true;
-        currentScore = 0;
-        scoreSpan.innerText = '0';
-        currentLevel = Math.floor(Math.random() * TOTAL_IMAGES);
+    function startGame(){
+        const name=nameInput.value.trim();
+        if(!name){ alert('❌ اسم اللاعب لا يمكن أن يكون فارغاً'); return; }
+        playerName=name;
+        playerNameSpan.innerText=name;
+        gameActive=true;
+        currentScore=0;
+        scoreSpan.innerText='0';
+        currentLevel=Math.floor(Math.random()*TOTAL_IMAGES);
         loadLevel(currentLevel);
         startTimer();
-        messageDiv.innerText = `🔥 اللعب نشط! ابحث عن الاختلافات يا ${name}`;
-        visitors.push({ name, score: 0 });
-        updateLeaderboard();
+        messageDiv.innerText=`🔥 اللعب نشط! ابحث عن الاختلافات يا ${name}`;
     }
 
-    function endLevel(won) {
+    function endLevel(won){
         clearInterval(timerIntervalId);
-        messageDiv.innerText = won ? "🎉 وجدت كل الاختلافات!" : "⏰ انتهى الوقت!";
-        nextRoundTimeout = setTimeout(() => {
-            loadLevel(currentLevel + 1);
-            gameActive = true;
+        messageDiv.innerText=won?"🎉 وجدت كل الاختلافات!":"⏰ انتهى الوقت!";
+        nextRoundTimeout=setTimeout(()=>{
+            loadLevel(currentLevel+1);
+            gameActive=true;
             startTimer();
-        }, 5000);
+        },5000);
     }
 
-    function updateLeaderboard() {
-        visitors.sort((a,b) => b.score - a.score);
-        leaderboardList.innerHTML = visitors.map(v =>
-            `<li>${v.name}: ${v.score}</li>`
-        ).join('');
-        onlineCountSpan.innerText = visitors.length;
-        visitorCountSpan.innerText = visitors.length;
-    }
-
-    leftImage.addEventListener('click', startGame);
-    rightImage.addEventListener('click', startGame);
-    enterBtn.addEventListener('click', startGame);
+    // ------------------------------------------------------
+    // تشغيل اللعبة عند الضغط
+    // ------------------------------------------------------
+    leftImage.addEventListener('click',startGame);
+    rightImage.addEventListener('click',startGame);
+    enterBtn.addEventListener('click',startGame);
 
     // ------------------------------------------------------
-    // POLO Login
+    // POLO Login Button
     // ------------------------------------------------------
-    function enterPolo() {
+    function enterPolo(){
         const name = document.getElementById("poloPlayerName").value.trim();
         const password = document.getElementById("poloPassword").value.trim();
-        if (password !== "POLO FAMILY") {
-            document.getElementById("poloError").innerText = "❌ كلمة المرور غير صحيحة";
-            return;
-        }
-        if (!name) {
-            document.getElementById("poloError").innerText = "❌ الرجاء إدخال الاسم";
-            return;
-        }
-        playerName = name;
-        document.getElementById("playerNameInput").value = name;
-        playerNameSpan.innerText = name;
-        document.getElementById("poloLoginPage").style.display = "none";
-        document.getElementById("mainGame").style.display = "flex";
-    }
-</script>
+        const errorEl = document.getElementById("poloError");
+        errorEl.innerText="";
 
+        if(password!=="POLO FAMILY"){
+            errorEl.innerText="❌ كلمة المرور غير صحيحة";
+            return;
+        }
+        if(!name){
+            errorEl.innerText="❌ الرجاء إدخال الاسم";
+            return;
+        }
+
+        playerName=name;
+        document.getElementById("playerNameInput").value=name;
+        playerNameSpan.innerText=name;
+        document.getElementById("poloLoginPage").style.display="none";
+        document.getElementById("mainGame").style.display="flex";
+    }
+
+    document.getElementById("poloEnterBtn").addEventListener("click", enterPolo);
+
+</script>
 </body>
 </html>
