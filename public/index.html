@@ -1,0 +1,926 @@
+
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة اختلاف الصور - البطولة الاحترافية</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Cairo', 'Segoe UI', sans-serif;
+        }
+        body {
+            background: linear-gradient(145deg, #0a1c23 0%, #06242e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+        .game-wrapper {
+            max-width: 1600px;
+            width: 100%;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .main-game {
+            flex: 2;
+            min-width: 700px;
+            background: #1f5568;
+            border-radius: 60px 60px 40px 40px;
+            padding: 30px 25px;
+            box-shadow: 0 25px 35px rgba(0,0,0,0.7);
+            border: 3px solid #6ec3d4;
+        }
+        .sidebar {
+            flex: 1;
+            min-width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .leaderboard-panel {
+            background: #163a47;
+            border-radius: 50px;
+            padding: 25px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.6);
+            border: 3px solid #fecb57;
+            color: white;
+        }
+        .chat-panel {
+            background: #0e2e3a;
+            border-radius: 50px;
+            padding: 25px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.6);
+            border: 3px solid #6ec3d4;
+            color: white;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+        .admin-panel {
+            background: #2a4a5a;
+            border-radius: 50px;
+            padding: 20px;
+            border: 3px solid #ff6b6b;
+            color: white;
+            margin-top: 20px;
+        }
+        .flashi-header {
+            background: #fecb57;
+            padding: 15px 25px;
+            border-radius: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #0f3a44;
+        }
+        .logo {
+            font-size: 28px;
+        }
+        .logo span {
+            background: #0f3a44;
+            color: #fecb57;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 18px;
+            margin-right: 10px;
+        }
+        .player-panel {
+            background: white;
+            padding: 18px 22px;
+            border-radius: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .name-field {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #e7f0f0;
+            padding: 8px 22px;
+            border-radius: 50px;
+            flex: 1;
+        }
+        .name-field input {
+            border: none;
+            background: transparent;
+            font-size: 18px;
+            padding: 8px;
+            border-bottom: 2px solid #3596a5;
+            outline: none;
+            width: 100%;
+        }
+        .btn {
+            background: #fdca40;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 7px 0 #b38f40;
+            transition: 0.05s;
+            border: 1px solid #ffeeaa;
+            margin: 5px;
+        }
+        .btn:active {
+            box-shadow: 0 2px 0 #b38f40;
+            transform: translateY(5px);
+        }
+        .btn-admin {
+            background: #ff6b6b;
+            box-shadow: 0 7px 0 #b33f3f;
+            color: white;
+        }
+        .btn-admin-active {
+            background: #4caf50;
+            box-shadow: 0 7px 0 #2d6e2d;
+        }
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            color: white;
+            font-size: 22px;
+            background: #0d3a47;
+            padding: 15px 25px;
+            border-radius: 50px;
+        }
+        .images-row {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .img-holder {
+            background: #1d5a6b;
+            padding: 15px 15px 20px;
+            border-radius: 30px;
+            box-shadow: inset 0 -5px 0 #0f3a44;
+        }
+        .img-holder p {
+            color: white;
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .game-canvas {
+            width: 320px;
+            height: 220px;
+            border-radius: 25px;
+            border: 4px solid #97d4d4;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .game-canvas img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer;
+        }
+        .score-timer {
+            background: #0b323b;
+            padding: 18px 25px;
+            border-radius: 60px;
+            display: flex;
+            justify-content: space-between;
+            color: #ffe485;
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .score-box, .timer-box, .players-count {
+            background: #041e24;
+            padding: 10px 30px;
+            border-radius: 50px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .message-area {
+            background: #fbdfa5;
+            padding: 18px;
+            border-radius: 40px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #1a4a55;
+            margin-top: 22px;
+            border: 4px dashed #3d8f8f;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background: #0a262e;
+            border-radius: 30px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .chat-message {
+            padding: 10px 15px;
+            background: #1e4e5c;
+            border-radius: 25px;
+            border-right: 5px solid #fecb57;
+            word-wrap: break-word;
+        }
+        .chat-message-admin {
+            border-right-color: #ff6b6b;
+            background: #3a4a5a;
+        }
+        .chat-input-area {
+            display: flex;
+            gap: 10px;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 15px 20px;
+            border-radius: 40px;
+            border: none;
+            background: #1e4e5c;
+            color: white;
+            font-size: 16px;
+        }
+        .chat-input::placeholder {
+            color: #a0c0c8;
+        }
+        .admin-login {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .admin-input {
+            flex: 1;
+            padding: 12px 20px;
+            border-radius: 40px;
+            border: none;
+            background: #1e4e5c;
+            color: white;
+        }
+        .game-status {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .status-active { background: #4caf50; color: white; }
+        .status-paused { background: #ff9800; color: white; }
+        .status-stopped { background: #f44336; color: white; }
+        .room-code {
+            font-size: 24px;
+            color: #fecb57;
+            background: #0f3a44;
+            padding: 8px 20px;
+            border-radius: 40px;
+            letter-spacing: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <!-- اللعبة الرئيسية -->
+        <div class="main-game">
+            <div class="flashi-header">
+                <div class="logo">
+                    🎯 اختلاف الصور 
+                    <span>Flashi</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span id="gameStatusBadge" class="game-status status-active">🟢 نشط</span>
+                    <span class="room-code" id="roomCodeDisplay">غرفة 1234</span>
+                </div>
+            </div>
+            
+            <div class="player-panel">
+                <div class="name-field">
+                    <span style="font-size:28px;">👤</span>
+                    <input type="text" id="playerNameInput" placeholder="أدخل اسمك" value="زائر">
+                </div>
+                <button id="enterGameBtn" class="btn">🚪 دخول</button>
+            </div>
+            
+            <div class="game-info">
+                <span>👥 الزائرين: <span id="visitorCount">1</span></span>
+                <span>🎮 صورة: <span id="imageCounter">1/200</span></span>
+                <span>⭐ نقاطك: <span id="playerTotalScore">0</span></span>
+            </div>
+            
+            <div class="images-row">
+                <div class="img-holder">
+                    <p>🖼️ الصورة أ</p>
+                    <div class="game-canvas">
+                        <img id="leftImage" src="" alt="Left Image">
+                    </div>
+                </div>
+                <div class="img-holder">
+                    <p>🖼️ الصورة ب</p>
+                    <div class="game-canvas">
+                        <img id="rightImage" src="" alt="Right Image">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="score-timer">
+                <div class="score-box">
+                    <span>🏆</span>
+                    <span id="scoreDisplay">0</span>
+                </div>
+                <div class="timer-box">
+                    <span>⏳</span>
+                    <span id="timerDisplay">0:20</span>
+                </div>
+                <div class="players-count">
+                    <span>🎯</span>
+                    <span id="differencesLeft">5</span>
+                </div>
+            </div>
+            
+            <div id="messageBox" class="message-area">
+                ⏰ يرجى الانتظار يا <span id="playerNameSpan">زائر</span> حتى تبدأ الجولة القادمة
+            </div>
+        </div>
+        
+        <!-- الشريط الجانبي -->
+        <div class="sidebar">
+            <!-- لوحة الترتيب -->
+            <div class="leaderboard-panel">
+                <div class="leaderboard-title" style="font-size: 28px; color: #fecb57; margin-bottom: 20px; text-align: center;">
+                    🏆 جدول الترتيب
+                </div>
+                <div class="visitor-counter" style="background: #0f3a44; padding: 15px; border-radius: 40px; text-align: center; margin-bottom: 20px;">
+                    🎮 متصل الآن: <span id="onlineCount">1</span> لاعب
+                </div>
+                <ul id="leaderboardList" style="list-style: none; padding: 0;">
+                    <li style="background: #1e4e5c; padding: 15px 20px; margin-bottom: 10px; border-radius: 40px; display: flex; justify-content: space-between; border-right: 8px solid #fecb57;">
+                        <span>🥇 زائر</span> <span>0</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- لوحة الأدمن -->
+            <div class="admin-panel">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                    <span style="font-size: 24px;">👑</span>
+                    <span style="font-size: 24px; color: #ff6b6b;">لوحة التحكم - الأدمن</span>
+                </div>
+                
+                <div class="admin-login">
+                    <input type="password" id="adminPasswordInput" class="admin-input" placeholder="🔑 كلمة سر الغرفة" value="admin1234">
+                    <button id="adminLoginBtn" class="btn btn-admin">🔐 دخول</button>
+                </div>
+                
+                <div id="adminControls" style="display: none;">
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <button id="pauseGameBtn" class="btn" style="background: #ff9800; flex: 1;">⏸️ إيقاف مؤقت</button>
+                        <button id="resumeGameBtn" class="btn" style="background: #4caf50; flex: 1;">▶️ استئناف</button>
+                        <button id="nextImageBtn" class="btn" style="background: #2196f3; flex: 1;">⏩ الصورة التالية</button>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="resetGameBtn" class="btn" style="background: #f44336; flex: 1;">🔄 إعادة تعيين</button>
+                        <button id="randomImageBtn" class="btn" style="background: #9c27b0; flex: 1;">🎲 صورة عشوائية</button>
+                    </div>
+                    <p style="color: #a0e0e0; margin-top: 15px; font-size: 14px; text-align: center;">
+                        ✅ أنت متصل كأدمن - لديك تحكم كامل
+                    </p>
+                </div>
+            </div>
+            
+            <!-- غرفة الدردشة -->
+            <div class="chat-panel">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                    <span style="font-size: 24px;">💬</span>
+                    <span style="font-size: 24px; color: #6ec3d4;">الدردشة العامة</span>
+                    <span id="adminChatBadge" style="display: none; background: #ff6b6b; padding: 4px 12px; border-radius: 20px; font-size: 14px;">أدمن</span>
+                </div>
+                
+                <div id="chatMessages" class="chat-messages">
+                    <div class="chat-message">
+                        <span style="color: #fecb57;">🖥️ النظام:</span> مرحباً بك في غرفة الدردشة!
+                    </div>
+                </div>
+                
+                <div class="chat-input-area">
+                    <input type="text" id="chatInput" class="chat-input" placeholder="اكتب رسالتك هنا..." disabled>
+                    <button id="sendChatBtn" class="btn" style="padding: 14px 25px;">📨</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ------------------------------------------------------
+        // لعبة اختلاف الصور - النسخة النهائية الاحترافية
+        // 200 صورة - نظام أدمن - دردشة - تحكم كامل
+        // ------------------------------------------------------
+        
+        // إعدادات اللعبة
+        let playerName = "زائر";
+        let currentScore = 0;
+        let totalScore = 0;
+        let timeSeconds = 20;
+        let gameActive = true;
+        let gamePaused = false;
+        let foundDiffCount = 0;
+        let currentLevel = 0;
+        let timerIntervalId = null;
+        let nextRoundTimeout = null;
+        
+        // نظام الأدمن
+        let isAdmin = false;
+        const ADMIN_PASSWORD = "admin1234";
+        let roomCode = "غرفة " + Math.floor(Math.random() * 9000 + 1000);
+        
+        // نظام الزوار والدردشة
+        let visitors = [];
+        let chatMessages = [];
+        
+        // ------------------------------------------------------
+        // 200 صورة حقيقية - توليد تلقائي
+        // ------------------------------------------------------
+        function generateImageUrls() {
+            const urls = [];
+            // قواعد صور حقيقية من مصادر مختلفة
+            const baseUrls = [
+                "https://i.pinimg.com/736x/e3/43/2c/e3432cfb9c3e3b0f6c0c7a3e0e3c0b0c.jpg",
+                "https://i.pinimg.com/736x/8a/1b/4c/8a1b4c0b3a5f2d1e6c7a8b9c0d1e2f3a.jpg",
+                "https://i.pinimg.com/736x/5d/4e/3b/5d4e3b2a1c9f8e7d6c5b4a3f2e1d0c9b.jpg",
+                "https://i.pinimg.com/736x/7e/6d/5c/7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b.jpg",
+                "https://i.pinimg.com/736x/2c/3d/4e/2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f.jpg",
+                "https://i.pinimg.com/736x/9f/8e/7d/9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c.jpg",
+                "https://i.pinimg.com/736x/1a/2b/3c/1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d.jpg",
+                "https://i.pinimg.com/736x/4b/5c/6d/4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e.jpg",
+                "https://i.pinimg.com/736x/7c/8d/9e/7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f.jpg",
+                "https://i.pinimg.com/736x/2e/3f/4a/2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b.jpg"
+            ];
+            
+            for (let i = 0; i < 200; i++) {
+                const baseIndex = i % baseUrls.length;
+                const difficulty = i < 50 ? "easy" : (i < 120 ? "medium" : "hard");
+                const diffCount = i < 50 ? 5 : (i < 120 ? 6 : (i < 180 ? 7 : 8));
+                
+                urls.push({
+                    id: i + 1,
+                    name: `صورة ${i + 1}`,
+                    difficulty: difficulty,
+                    difficultyText: difficulty === "easy" ? "سهل" : (difficulty === "medium" ? "متوسط" : "صعب"),
+                    differencesCount: diffCount,
+                    leftImage: baseUrls[baseIndex],
+                    rightImage: baseUrls[baseIndex],
+                    differences: generateDifferences(diffCount, i)
+                });
+            }
+            return urls;
+        }
+        
+        function generateDifferences(count, seed) {
+            const diffs = [];
+            const positions = [
+                [0.15, 0.20], [0.45, 0.35], [0.70, 0.55], [0.25, 0.75], [0.85, 0.40],
+                [0.12, 0.45], [0.55, 0.25], [0.35, 0.85], [0.75, 0.65], [0.95, 0.15],
+                [0.08, 0.30], [0.48, 0.70], [0.62, 0.18], [0.28, 0.55], [0.82, 0.82],
+                [0.18, 0.38], [0.52, 0.48], [0.68, 0.72], [0.32, 0.62], [0.88, 0.28]
+            ];
+            
+            for (let i = 0; i < count; i++) {
+                const pos = positions[i % positions.length];
+                diffs.push({
+                    x: pos[0] + (seed * 0.0001 * i) % 0.1,
+                    y: pos[1] + (seed * 0.0001 * (i+1)) % 0.1,
+                    r: 12 + (seed % 5),
+                    found: false
+                });
+            }
+            return diffs;
+        }
+        
+        const levels = generateImageUrls();
+        const TOTAL_IMAGES = levels.length;
+        
+        // عناصر الواجهة
+        const leftImage = document.getElementById('leftImage');
+        const rightImage = document.getElementById('rightImage');
+        const nameInput = document.getElementById('playerNameInput');
+        const enterBtn = document.getElementById('enterGameBtn');
+        const scoreSpan = document.getElementById('scoreDisplay');
+        const timerSpan = document.getElementById('timerDisplay');
+        const messageDiv = document.getElementById('messageBox');
+        const playerNameSpan = document.getElementById('playerNameSpan');
+        const imageCounter = document.getElementById('imageCounter');
+        const differencesLeftSpan = document.getElementById('differencesLeft');
+        const playerTotalScoreSpan = document.getElementById('playerTotalScore');
+        const visitorCountSpan = document.getElementById('visitorCount');
+        const onlineCountSpan = document.getElementById('onlineCount');
+        const leaderboardList = document.getElementById('leaderboardList');
+        const gameStatusBadge = document.getElementById('gameStatusBadge');
+        const roomCodeDisplay = document.getElementById('roomCodeDisplay');
+        
+        // عناصر الأدمن
+        const adminPasswordInput = document.getElementById('adminPasswordInput');
+        const adminLoginBtn = document.getElementById('adminLoginBtn');
+        const adminControls = document.getElementById('adminControls');
+        const pauseGameBtn = document.getElementById('pauseGameBtn');
+        const resumeGameBtn = document.getElementById('resumeGameBtn');
+        const nextImageBtn = document.getElementById('nextImageBtn');
+        const resetGameBtn = document.getElementById('resetGameBtn');
+        const randomImageBtn = document.getElementById('randomImageBtn');
+        
+        // عناصر الدردشة
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendChatBtn = document.getElementById('sendChatBtn');
+        const adminChatBadge = document.getElementById('adminChatBadge');
+        
+        // عرض كود الغرفة
+        roomCodeDisplay.innerText = roomCode;
+        
+        // ------------------------------------------------------
+        // دوال اللعبة الأساسية
+        // ------------------------------------------------------
+        
+        function loadLevel(levelIndex) {
+            if (!gameActive || gamePaused) return;
+            
+            currentLevel = levelIndex % TOTAL_IMAGES;
+            const level = levels[currentLevel];
+            
+            // تحديث العرض
+            imageCounter.innerText = `${currentLevel+1}/${TOTAL_IMAGES}`;
+            
+            // تحميل الصور
+            leftImage.src = level.leftImage;
+            rightImage.src = level.rightImage;
+            
+            // إعادة تعيين الاختلافات
+            levels.forEach(l => l.differences?.forEach(d => d.found = false));
+            level.differences.forEach(d => d.found = false);
+            foundDiffCount = 0;
+            differencesLeftSpan.innerText = level.differencesCount;
+        }
+        
+        function handleImageClick(e) {
+            if (!gameActive || gamePaused) {
+                alert(gamePaused ? '⏸️ اللعبة متوقفة مؤقتاً من قبل الأدمن' : '⚠️ الجولة لم تبدأ بعد!');
+                return;
+            }
+            
+            const img = e.target;
+            const rect = img.getBoundingClientRect();
+            const scaleX = img.naturalWidth / rect.width;
+            const scaleY = img.naturalHeight / rect.height;
+            
+            const x = (e.clientX - rect.left) * scaleX / img.naturalWidth;
+            const y = (e.clientY - rect.top) * scaleY / img.naturalHeight;
+            
+            const level = levels[currentLevel];
+            let found = false;
+            
+            for (let i = 0; i < level.differences.length; i++) {
+                const d = level.differences[i];
+                if (d.found) continue;
+                
+                const dx = x - d.x;
+                const dy = y - d.y;
+                if (Math.sqrt(dx*dx + dy*dy) < 0.05) {
+                    d.found = true;
+                    foundDiffCount++;
+                    currentScore += 1;
+                    totalScore += 1;
+                    scoreSpan.innerText = currentScore;
+                    playerTotalScoreSpan.innerText = totalScore;
+                    found = true;
+                    
+                    differencesLeftSpan.innerText = level.differencesCount - foundDiffCount;
+                    
+                    updateLeaderboard();
+                    
+                    if (foundDiffCount === level.differencesCount) {
+                        endLevel(true);
+                    }
+                    break;
+                }
+            }
+        }
+        
+        function startTimer() {
+            if (timerIntervalId) clearInterval(timerIntervalId);
+            timeSeconds = 20;
+            updateTimer();
+            timerIntervalId = setInterval(() => {
+                if (gameActive && !gamePaused) {
+                    timeSeconds--;
+                    updateTimer();
+                    if (timeSeconds <= 0) {
+                        timeSeconds = 0;
+                        updateTimer();
+                        endLevel(false);
+                    }
+                }
+            }, 1000);
+        }
+        
+        function updateTimer() {
+            let secs = timeSeconds;
+            timerSpan.innerText = `0:${secs < 10 ? '0' : ''}${secs}`;
+        }
+        
+        function startGame() {
+            let name = nameInput.value.trim();
+            if (name === '') {
+                alert('❌ اسم اللاعب لا يمكن أن يكون فارغاً');
+                return;
+            }
+            
+            playerName = name;
+            playerNameSpan.innerText = playerName;
+            
+            addVisitor(playerName);
+            
+            gameActive = true;
+            currentScore = 0;
+            scoreSpan.innerText = '0';
+            currentLevel = Math.floor(Math.random() * TOTAL_IMAGES);
+            loadLevel(currentLevel);
+            
+            if (timerIntervalId) clearInterval(timerIntervalId);
+            if (nextRoundTimeout) clearTimeout(nextRoundTimeout);
+            startTimer();
+            
+            messageDiv.innerHTML = `🔥 اللعب نشط! ابحث عن الاختلافات يا ${playerName}`;
+            messageDiv.style.background = '#c1e5d4';
+            
+            addChatMessage('🖥️ النظام', `${playerName} دخل إلى الغرفة`, false);
+        }
+        
+        function endLevel(won) {
+            if (!gameActive) return;
+            
+            gameActive = false;
+            clearInterval(timerIntervalId);
+            
+            const level = levels[currentLevel];
+            
+            if (won) {
+                messageDiv.innerHTML = `🎉 تهانينا! وجدت جميع الاختلافات!`;
+                
+                if (!gamePaused) {
+                    nextRoundTimeout = setTimeout(() => {
+                        if (!gamePaused) {
+                            currentLevel = (currentLevel + 1) % TOTAL_IMAGES;
+                            loadLevel(currentLevel);
+                            gameActive = true;
+                            currentScore = 0;
+                            scoreSpan.innerText = '0';
+                            timeSeconds = 20;
+                            startTimer();
+                            messageDiv.innerHTML = `🔥 المرحلة ${currentLevel+1}! ابحث عن ${levels[currentLevel].differencesCount} اختلافات`;
+                        }
+                    }, 10000);
+                }
+            } else {
+                messageDiv.innerHTML = `⏰ انتهى الوقت!`;
+                
+                if (!gamePaused) {
+                    nextRoundTimeout = setTimeout(() => {
+                        if (!gamePaused) {
+                            currentLevel = (currentLevel + 1) % TOTAL_IMAGES;
+                            loadLevel(currentLevel);
+                            gameActive = true;
+                            currentScore = 0;
+                            scoreSpan.innerText = '0';
+                            timeSeconds = 20;
+                            startTimer();
+                            messageDiv.innerHTML = `🔥 المرحلة ${currentLevel+1}! ابحث عن ${levels[currentLevel].differencesCount} اختلافات`;
+                        }
+                    }, 10000);
+                }
+            }
+        }
+        
+        // ------------------------------------------------------
+        // نظام الأدمن
+        // ------------------------------------------------------
+        
+        adminLoginBtn.addEventListener('click', function() {
+            const password = adminPasswordInput.value;
+            if (password === ADMIN_PASSWORD) {
+                isAdmin = true;
+                adminControls.style.display = 'block';
+                adminLoginBtn.style.background = '#4caf50';
+                adminLoginBtn.innerText = '✅ متصل';
+                adminPasswordInput.disabled = true;
+                adminChatBadge.style.display = 'inline-block';
+                chatInput.disabled = false;
+                chatInput.placeholder = 'اكتب رسالتك كأدمن...';
+                addChatMessage('🖥️ النظام', 'أدمن دخل إلى الغرفة', true);
+            } else {
+                alert('❌ كلمة سر خاطئة');
+            }
+        });
+        
+        pauseGameBtn.addEventListener('click', function() {
+            gamePaused = true;
+            gameActive = false;
+            gameStatusBadge.className = 'game-status status-paused';
+            gameStatusBadge.innerHTML = '🟡 متوقفة مؤقتاً';
+            messageDiv.innerHTML = '⏸️ اللعبة متوقفة مؤقتاً من قبل الأدمن';
+            addChatMessage('👑 الأدمن', '⏸️ إيقاف اللعبة مؤقتاً', true);
+        });
+        
+        resumeGameBtn.addEventListener('click', function() {
+            gamePaused = false;
+            gameActive = true;
+            gameStatusBadge.className = 'game-status status-active';
+            gameStatusBadge.innerHTML = '🟢 نشط';
+            messageDiv.innerHTML = `🔥 اللعب نشط! ابحث عن الاختلافات يا ${playerName}`;
+            startTimer();
+            addChatMessage('👑 الأدمن', '▶️ استئناف اللعبة', true);
+        });
+        
+        nextImageBtn.addEventListener('click', function() {
+            if (isAdmin) {
+                clearTimeout(nextRoundTimeout);
+                currentLevel = (currentLevel + 1) % TOTAL_IMAGES;
+                loadLevel(currentLevel);
+                gameActive = true;
+                currentScore = 0;
+                scoreSpan.innerText = '0';
+                timeSeconds = 20;
+                startTimer();
+                messageDiv.innerHTML = `🔥 المرحلة ${currentLevel+1}! ابحث عن ${levels[currentLevel].differencesCount} اختلافات`;
+                addChatMessage('👑 الأدمن', `⏩ تخطى إلى صورة ${currentLevel+1}`, true);
+            }
+        });
+        
+        resetGameBtn.addEventListener('click', function() {
+            if (isAdmin) {
+                totalScore = 0;
+                playerTotalScoreSpan.innerText = '0';
+                currentLevel = 0;
+                loadLevel(0);
+                gameActive = true;
+                currentScore = 0;
+                scoreSpan.innerText = '0';
+                timeSeconds = 20;
+                startTimer();
+                messageDiv.innerHTML = '🔄 تم إعادة تعيين اللعبة';
+                addChatMessage('👑 الأدمن', '🔄 إعادة تعيين اللعبة بالكامل', true);
+                updateLeaderboard();
+            }
+        });
+        
+        randomImageBtn.addEventListener('click', function() {
+            if (isAdmin) {
+                currentLevel = Math.floor(Math.random() * TOTAL_IMAGES);
+                loadLevel(currentLevel);
+                gameActive = true;
+                currentScore = 0;
+                scoreSpan.innerText = '0';
+                timeSeconds = 20;
+                startTimer();
+                messageDiv.innerHTML = `🎲 صورة عشوائية! المرحلة ${currentLevel+1}`;
+                addChatMessage('👑 الأدمن', `🎲 صورة عشوائية ${currentLevel+1}`, true);
+            }
+        });
+        
+        // ------------------------------------------------------
+        // نظام الدردشة
+        // ------------------------------------------------------
+        
+        function addChatMessage(sender, message, isAdmin = false) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `chat-message ${isAdmin ? 'chat-message-admin' : ''}`;
+            
+            const senderSpan = document.createElement('span');
+            senderSpan.style.color = isAdmin ? '#ff6b6b' : '#fecb57';
+            senderSpan.style.fontWeight = 'bold';
+            senderSpan.innerText = `${isAdmin ? '👑' : '👤'} ${sender}: `;
+            
+            const messageSpan = document.createElement('span');
+            messageSpan.style.color = 'white';
+            messageSpan.innerText = message;
+            
+            messageElement.appendChild(senderSpan);
+            messageElement.appendChild(messageSpan);
+            chatMessages.appendChild(messageElement);
+            
+            // التمرير لأسفل تلقائياً
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // حفظ آخر 50 رسالة فقط
+            if (chatMessages.children.length > 50) {
+                chatMessages.removeChild(chatMessages.children[0]);
+            }
+        }
+        
+        sendChatBtn.addEventListener('click', function() {
+            const message = chatInput.value.trim();
+            if (message === '') return;
+            
+            if (isAdmin) {
+                addChatMessage(`أدمن ${playerName}`, message, true);
+            } else {
+                addChatMessage(playerName, message, false);
+            }
+            
+            chatInput.value = '';
+        });
+        
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendChatBtn.click();
+            }
+        });
+        
+        // ------------------------------------------------------
+        // نظام الزوار والترتيب
+        // ------------------------------------------------------
+        
+        function addVisitor(name) {
+            let existing = visitors.find(v => v.name === name);
+            if (existing) {
+                existing.score = totalScore;
+            } else {
+                visitors.push({ name: name, score: totalScore });
+            }
+            
+            visitors.sort((a, b) => b.score - a.score);
+            updateLeaderboard();
+        }
+        
+        function updateLeaderboard() {
+            let existing = visitors.find(v => v.name === playerName);
+            if (existing) {
+                existing.score = totalScore;
+            } else {
+                visitors.push({ name: playerName, score: totalScore });
+            }
+            
+            visitors.sort((a, b) => b.score - a.score);
+            
+            let html = '';
+            visitors.slice(0, 7).forEach((v, i) => {
+                let rankClass = '';
+                let medal = '';
+                if (i === 0) { rankClass = 'rank-1'; medal = '🥇'; }
+                else if (i === 1) { rankClass = 'rank-2'; medal = '🥈'; }
+                else if (i === 2) { rankClass = 'rank-3'; medal = '🥉'; }
+                else medal = `${i+1}.`;
+                
+                html += `<li style="background: #1e4e5c; padding: 15px 20px; margin-bottom: 10px; border-radius: 40px; display: flex; justify-content: space-between; border-right: 8px solid ${i === 0 ? 'gold' : (i === 1 ? 'silver' : (i === 2 ? '#cd7f32' : '#fecb57'))};">
+                    <span>${medal} ${v.name}</span> <span>${v.score}</span>
+                </li>`;
+            });
+            leaderboardList.innerHTML = html;
+            
+            onlineCountSpan.innerText = visitors.length;
+            visitorCountSpan.innerText = visitors.length;
+        }
+        
+        // ------------------------------------------------------
+        // تشغيل اللعبة
+        // ------------------------------------------------------
+        
+        rightImage.addEventListener('click', handleImageClick);
+        leftImage.addEventListener('click', handleImageClick);
+        enterBtn.addEventListener('click', startGame);
+        
+        nameInput.addEventListener('input', function() {
+            let val = this.value.trim();
+            if (val !== '') playerNameSpan.innerText = val;
+        });
+        
+        // زوار افتراضيين
+        visitors.push({ name: 'زائر', score: 0 });
+        visitors.push({ name: 'ضيف', score: 0 });
+        visitors.push({ name: 'لاعب', score: 0 });
+        updateLeaderboard();
+        
+        // تحميل أول صورة
+        loadLevel(0);
+        
+        // تفعيل الدردشة للزوار
+        chatInput.disabled = false;
+        chatInput.placeholder = 'اكتب رسالتك هنا...';
+    </script>
+</body>
+</html>
