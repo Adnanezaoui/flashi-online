@@ -1,96 +1,107 @@
 const socket = io();
 
-const loginPage = document.getElementById('loginPage');
-const gamePage = document.getElementById('gamePage');
+let differences=[];
+let timerInterval;
 
-const playerLoginBtn = document.getElementById('playerLoginBtn');
-const adminLoginBtn = document.getElementById('adminLoginBtn');
-const playerForm = document.getElementById('playerForm');
-const adminForm = document.getElementById('adminForm');
-const loginPlayerSubmit = document.getElementById('loginPlayerSubmit');
-const loginAdminSubmit = document.getElementById('loginAdminSubmit');
-const loginError = document.getElementById('loginError');
-const adminError = document.getElementById('adminError');
+function join(){
+    const name=document.getElementById("name").value;
+    socket.emit("joinGame",name);
+}
 
-const displayName = document.getElementById('displayName');
-const adminControls = document.getElementById('adminControls');
-const startRoundBtn = document.getElementById('startRoundBtn');
-const stopRoundBtn = document.getElementById('stopRoundBtn');
+function start(){
+    socket.emit("startTournament");
+}
 
-const timerDiv = document.getElementById('timer');
-const leftImg = document.getElementById('leftImg');
-const rightImg = document.getElementById('rightImg');
-const playerList = document.getElementById('playerList');
-const roundResults = document.getElementById('roundResults');
+socket.on("roundStarted", data=>{
+    document.getElementById("results").style.display="none";
+    document.getElementById("images").style.display="flex";
 
-let playerName = "";
-let isAdmin = false;
+    document.getElementById("roundInfo").innerText=
+    "Round "+data.round+" - "+data.difficulty.toUpperCase();
 
-// Show forms
-playerLoginBtn.addEventListener('click', ()=>{ playerForm.style.display="block"; adminForm.style.display="none"; });
-adminLoginBtn.addEventListener('click', ()=>{ adminForm.style.display="block"; playerForm.style.display="none"; });
+    document.getElementById("left").src=data.image;
+    document.getElementById("right").src=data.image;
 
-// Player login
-loginPlayerSubmit.addEventListener('click', ()=>{
-  const name = document.getElementById('playerName').value.trim();
-  const password = document.getElementById('playerPassword').value.trim();
-  if(password !== "POLO FAMILY"){ loginError.innerText="❌ كلمة المرور خاطئة"; return; }
-  if(!name){ loginError.innerText="❌ الرجاء إدخال الاسم"; return; }
-  playerName = name;
-  displayName.innerText = name;
-  loginPage.style.display="none";
-  gamePage.style.display="block";
-  adminControls.style.display="none";
-  socket.emit('joinGame', {name});
+    generateDifferences(data.difficulty);
+    startTimer(data.time);
 });
 
-// Admin login
-loginAdminSubmit.addEventListener('click', ()=>{
-  const name = document.getElementById('adminName').value.trim();
-  const password = document.getElementById('adminPassword').value.trim();
-  if(password !== "ADMINPOLO"){ adminError.innerText="❌ كلمة مرور الأدمن خاطئة"; return; }
-  if(!name){ adminError.innerText="❌ الرجاء إدخال الاسم"; return; }
-  playerName = name;
-  displayName.innerText = name;
-  loginPage.style.display="none";
-  gamePage.style.display="block";
-  isAdmin = true;
-  adminControls.style.display="block";
-  socket.emit('joinGame', {name});
+function generateDifferences(level){
+    differences=[];
+    let count=5;
+    if(level==="medium") count=8;
+    if(level==="hard") count=12;
+
+    for(let i=0;i<count;i++){
+        differences.push({
+            x:Math.random()*350+20,
+            y:Math.random()*200+20,
+            found:false
+        });
+    }
+}
+
+document.getElementById("right").addEventListener("click", e=>{
+    const rect=e.target.getBoundingClientRect();
+    const x=e.clientX-rect.left;
+    const y=e.clientY-rect.top;
+
+    let hit=false;
+
+    differences.forEach(d=>{
+        if(!d.found &&
+           Math.abs(x-d.x)<30 &&
+           Math.abs(y-d.y)<30){
+            d.found=true;
+            hit=true;
+            socket.emit("scorePoint");
+            document.getElementById("correctSound").play();
+        }
+    });
+
+    if(!hit){
+        document.getElementById("wrongSound").play();
+    }
 });
 
-// Admin buttons
-startRoundBtn.addEventListener('click', ()=>socket.emit('startRound'));
-stopRoundBtn.addEventListener('click', ()=>socket.emit('stopRound'));
+function startTimer(seconds){
+    clearInterval(timerInterval);
+    let time=seconds;
 
-// Player clicks
-leftImg.addEventListener('click', ()=>socket.emit('foundDiff'));
-rightImg.addEventListener('click', ()=>socket.emit('foundDiff'));
+    timerInterval=setInterval(()=>{
+        document.getElementById("timer").innerText=time;
+        time--;
+        if(time<0){
+            clearInterval(timerInterval);
+        }
+    },1000);
+}
 
-// Socket events
-socket.on('roundStart', ({image,time})=>{
-  timerDiv.innerText = time;
-  leftImg.src = image.left;
-  rightImg.src = image.right;
-  roundResults.style.display="none";
-  document.getElementById('images').style.display="block";
+socket.on("roundEnded", leaderboard=>{
+    document.getElementById("images").style.display="none";
+    document.getElementById("results").style.display="block";
+
+    const body=document.getElementById("resultBody");
+    body.innerHTML="";
+
+    leaderboard.forEach((p,i)=>{
+        let medal="";
+        if(i==0) medal="🥇";
+        if(i==1) medal="🥈";
+        if(i==2) medal="🥉";
+
+        body.innerHTML+=`
+        <tr>
+        <td>${i+1}</td>
+        <td>${medal} ${p.name}</td>
+        <td>${p.totalScore}</td>
+        </tr>`;
+    });
 });
 
-socket.on('timer', time=>{ timerDiv.innerText = time; });
-
-socket.on('roundEnd', players=>{
-  document.getElementById('images').style.display="none";
-  roundResults.style.display="block";
-  let html = `<h3>نتائج الجولة (المجموع الحالي):</h3>
-              <table><tr><th>اللاعب</th><th>نقاط الجولة</th><th>المجموع الكلي</th></tr>`;
-  players.forEach(p=>{
-    html += `<tr><td>${p.name}</td><td>${p.roundScore}</td><td>${p.totalScore}</td></tr>`;
-  });
-  html += `</table>`;
-  roundResults.innerHTML = html;
-});
-
-socket.on('updatePlayers', players=>{
-  playerList.innerHTML = "<h3>اللاعبون الحاليون:</h3>" +
-      players.map(p=>`<p>${p.name} - مجموع النقاط: ${p.totalScore}</p>`).join("");
+socket.on("tournamentEnded", leaderboard=>{
+    document.body.innerHTML=
+    `<h1>🏆 TOURNAMENT WINNER 🏆</h1>
+     <h2>${leaderboard[0].name}</h2>`;
+    document.getElementById("winSound").play();
 });
