@@ -1,110 +1,93 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+app.use(express.static("public"));
+
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname, "public")));
-
 let players = {};
-let roundNumber = 0;
 let roundActive = false;
-let roundTime = 20;
-let maxRounds = 15;
+let roundNumber = 0;
+let roundTime = 15;
+let countdown;
+let currentImageSeed = 1;
 
-/* IMAGE PROXY (100% WORKS ON RENDER) */
-app.get("/image", (req, res) => {
-    const width = 800;
-    const height = 500;
-    const seed = Date.now();
-    res.redirect(`https://picsum.photos/seed/${seed}/${width}/${height}`);
-});
-
-function getDifficulty(round){
-    if(round <= 5) return "easy";
-    if(round <= 10) return "medium";
-    return "hard";
-}
-
-function startRound(){
-    roundNumber++;
+function startRound() {
     roundActive = true;
+    roundNumber++;
+    currentImageSeed = Math.floor(Math.random() * 10000);
 
-    Object.values(players).forEach(p => p.roundScore = 0);
+    for (let id in players) {
+        players[id].roundScore = 0;
+    }
 
     io.emit("roundStarted", {
         round: roundNumber,
-        image: `/image?${Date.now()}`,
-        difficulty: getDifficulty(roundNumber),
+        seed: currentImageSeed,
         time: roundTime
     });
 
-    setTimeout(endRound, roundTime * 1000);
+    let timeLeft = roundTime;
+
+    countdown = setInterval(() => {
+        timeLeft--;
+        io.emit("timer", timeLeft);
+
+        if (timeLeft <= 0) {
+            clearInterval(countdown);
+            endRound();
+        }
+    }, 1000);
 }
 
-function endRound(){
+function endRound() {
     roundActive = false;
 
-    const leaderboard = Object.values(players)
-        .sort((a,b)=> b.totalScore - a.totalScore);
+    let leaderboard = Object.values(players)
+        .sort((a, b) => b.totalScore - a.totalScore);
 
     io.emit("roundEnded", leaderboard);
 
-    if(roundNumber < maxRounds){
-        setTimeout(startRound, 10000);
-    } else {
-        io.emit("tournamentEnded", leaderboard);
-    }
+    setTimeout(() => {
+        startRound();
+    }, 10000);
 }
 
-function sendPlayers(){
-    io.emit("playersUpdate",
-        Object.values(players).map(p=>({
-            name:p.name,
-            totalScore:p.totalScore
-        }))
-    );
-}
+io.on("connection", (socket) => {
 
-io.on("connection", socket => {
-
-    socket.on("joinGame", name => {
+    socket.on("join", ({ name, isAdmin }) => {
         players[socket.id] = {
-            name: name || "Player",
-            totalScore: 0,
-            roundScore: 0
+            id: socket.id,
+            name,
+            isAdmin,
+            roundScore: 0,
+            totalScore: 0
         };
-        sendPlayers();
+
+        io.emit("playersUpdate", Object.values(players));
     });
 
-    socket.on("scorePoint", ()=>{
-        if(!roundActive) return;
-        const p = players[socket.id];
-        if(!p) return;
-        if(p.roundScore >= 25) return; // anti cheat
-        p.roundScore++;
-        p.totalScore++;
-        sendPlayers();
+    socket.on("scorePoint", () => {
+        if (!roundActive) return;
+        players[socket.id].roundScore++;
+        players[socket.id].totalScore++;
+
+        io.emit("playersUpdate", Object.values(players));
     });
 
-    socket.on("startTournament", ()=>{
-        if(!roundActive){
-            roundNumber = 0;
-            startRound();
-        }
+    socket.on("startGame", () => {
+        startRound();
     });
 
-    socket.on("disconnect", ()=>{
+    socket.on("disconnect", () => {
         delete players[socket.id];
-        sendPlayers();
+        io.emit("playersUpdate", Object.values(players));
     });
 });
 
-server.listen(PORT, ()=>{
-    console.log("Server running on port " + PORT);
-});
+server.listen(PORT, () => console.log("Server running on " + PORT));
