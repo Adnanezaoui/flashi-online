@@ -4,70 +4,146 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>POLO - لعبة اختلاف الصور</title>
-<script src="/socket.io/socket.io.js"></script>
 <style>
-body { font-family:'Cairo',sans-serif; background:#0a1c23; color:white; text-align:center; margin:0; padding:0;}
-button { padding:10px 20px; margin:5px; border-radius:10px; font-size:16px; cursor:pointer; }
-#gamePage { display:none; }
-#loginPage { margin-top:50px;}
-#playerList, #roundResults { margin-top:20px; text-align:right; max-width:400px; margin-left:auto; margin-right:auto;}
-#images { margin-top:20px; }
-.image-holder { display:inline-block; margin:10px; }
-img { width:300px; height:200px; cursor:pointer; border:3px solid #fff; border-radius:10px; }
-table { width:80%; margin:auto; border-collapse: collapse; margin-top:10px;}
-table, th, td { border:1px solid #fff; padding:8px;}
-th { background:#1e4e5c; }
-td { background:#163a47; }
-#adminControls { margin:15px;}
-#timer { font-size:32px; margin-top:10px; color:#fdca40;}
+body { font-family: Cairo,sans-serif; background:#06242e; color:white; text-align:center; margin:0; padding:0;}
+#loginPage, #gamePage, #resultsPage { display:none; padding:20px;}
+input { padding:10px 15px; border-radius:30px; border:none; font-size:16px; margin:5px;}
+button { padding:10px 20px; border-radius:30px; border:none; cursor:pointer; font-size:16px; margin:5px;}
+#imagesRow { display:flex; justify-content:center; gap:20px; margin-top:20px;}
+.gameImage { width:320px; height:220px; border:4px solid #97d4d4; border-radius:20px; cursor:pointer;}
+table { width:80%; margin:20px auto; border-collapse:collapse; }
+th, td { border:1px solid white; padding:10px; font-size:18px; }
+th { background:#1f5568; }
 </style>
 </head>
 <body>
 
 <div id="loginPage">
-  <h1>🔥 POLO 🔥</h1>
-  <h3>اختر طريقة الدخول:</h3>
-  <button id="playerLoginBtn">دخول اللاعب</button>
-  <button id="adminLoginBtn">دخول الأدمن</button>
+<h1>🔥 POLO 🔥</h1>
+<button onclick="showPlayerLogin()">دخول لاعب</button>
+<button onclick="showAdminLogin()">دخول أدمن</button>
 
-  <div id="playerForm" style="display:none; margin-top:15px;">
-    <input type="text" id="playerName" placeholder="اسمك">
-    <input type="password" id="playerPassword" placeholder="كلمة المرور">
-    <button id="loginPlayerSubmit">دخول</button>
-    <p id="loginError" style="color:red;"></p>
-  </div>
+<div id="playerLogin" style="display:none; margin-top:20px;">
+<input id="playerName" placeholder="اسمك"><br>
+<input id="playerPass" placeholder="كلمة المرور"><br>
+<button onclick="joinGame(false)">دخول</button>
+<p id="playerError" style="color:red;"></p>
+</div>
 
-  <div id="adminForm" style="display:none; margin-top:15px;">
-    <input type="text" id="adminName" placeholder="اسم الأدمن">
-    <input type="password" id="adminPassword" placeholder="كلمة مرور الأدمن">
-    <button id="loginAdminSubmit">دخول</button>
-    <p id="adminError" style="color:red;"></p>
-  </div>
+<div id="adminLogin" style="display:none; margin-top:20px;">
+<input id="adminName" placeholder="اسم الأدمن"><br>
+<input id="adminPass" placeholder="كلمة المرور"><br>
+<button onclick="joinGame(true)">دخول</button>
+<p id="adminError" style="color:red;"></p>
+</div>
 </div>
 
 <div id="gamePage">
-  <h2>مرحبا <span id="displayName"></span></h2>
-
-  <div id="adminControls" style="display:none;">
-    <button id="startRoundBtn">🚀 بدء الجولة</button>
-    <button id="stopRoundBtn">⏹️ إيقاف اللعبة</button>
-  </div>
-
-  <div id="timer">15</div>
-
-  <div id="images">
-    <div class="image-holder">
-      <img id="leftImg" src="">
-    </div>
-    <div class="image-holder">
-      <img id="rightImg" src="">
-    </div>
-  </div>
-
-  <div id="playerList"></div>
-  <div id="roundResults" style="display:none;"></div>
+<h2>مرحلة <span id="roundNum"></span></h2>
+<p>الوقت المتبقي: <span id="timer">0</span> ثواني</p>
+<div id="imagesRow">
+<img id="leftImage" class="gameImage">
+<img id="rightImage" class="gameImage">
+</div>
+<p>نقاطك: <span id="playerScore">0</span> | المجموع: <span id="playerTotal">0</span></p>
+<h3>اللاعبون المتصلون:</h3>
+<ul id="playersList"></ul>
+<button id="startBtn" style="display:none;" onclick="startRound()">▶️ بدء الجولة</button>
+<button id="stopBtn" style="display:none;" onclick="stopGame()">⏹️ إيقاف اللعبة</button>
 </div>
 
-<script src="client.js"></script>
+<div id="resultsPage">
+<h2>نتائج الجولة <span id="resultsRound"></span></h2>
+<table>
+<thead>
+<tr><th>الترتيب</th><th>اسم اللاعب</th><th>نقاط الجولة</th><th>المجموع الكلي</th></tr>
+</thead>
+<tbody id="resultsTable"></tbody>
+</table>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let isAdmin = false;
+let playerName = '';
+
+function showPlayerLogin() {
+    document.getElementById('playerLogin').style.display='block';
+    document.getElementById('adminLogin').style.display='none';
+}
+function showAdminLogin() {
+    document.getElementById('playerLogin').style.display='none';
+    document.getElementById('adminLogin').style.display='block';
+}
+
+function joinGame(admin=false) {
+    if(admin){
+        const name = document.getElementById('adminName').value.trim();
+        const pass = document.getElementById('adminPass').value.trim();
+        if(pass!=='ADMINPOLO'){ document.getElementById('adminError').innerText='❌ كلمة السر خاطئة'; return;}
+        playerName = name || 'Admin';
+        isAdmin=true;
+    }else{
+        const name = document.getElementById('playerName').value.trim();
+        const pass = document.getElementById('playerPass').value.trim();
+        if(pass!=='POLO FAMILY'){ document.getElementById('playerError').innerText='❌ كلمة السر خاطئة'; return;}
+        playerName=name || 'زائر';
+    }
+    socket.emit('join',{name:playerName,isAdmin});
+    document.getElementById('loginPage').style.display='none';
+    document.getElementById('gamePage').style.display='block';
+    if(isAdmin){ document.getElementById('startBtn').style.display='inline-block'; document.getElementById('stopBtn').style.display='inline-block'; }
+}
+
+// Update players list
+socket.on('players', list=>{
+    const ul=document.getElementById('playersList');
+    ul.innerHTML='';
+    list.forEach(p=>{ const li=document.createElement('li'); li.innerText=`${p.name} - نقاط: ${p.totalScore}`; ul.appendChild(li); });
+});
+
+// New round
+socket.on('newRound', data=>{
+    document.getElementById('gamePage').style.display='block';
+    document.getElementById('resultsPage').style.display='none';
+    document.getElementById('roundNum').innerText=data.round;
+    document.getElementById('leftImage').src=data.image.left;
+    document.getElementById('rightImage').src=data.image.right;
+    document.getElementById('playerScore').innerText='0';
+    document.getElementById('playerTotal').innerText=playersTotalScore();
+});
+
+// Timer
+socket.on('timer', t=>{
+    document.getElementById('timer').innerText=t;
+});
+
+// Round ended
+socket.on('roundEnded', results=>{
+    document.getElementById('gamePage').style.display='none';
+    document.getElementById('resultsPage').style.display='block';
+    document.getElementById('resultsRound').innerText=results[0]?.round||'';
+    const tbody=document.getElementById('resultsTable');
+    tbody.innerHTML='';
+    results.sort((a,b)=>b.totalScore-a.totalScore).forEach((p,i)=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${i+1}</td><td>${p.name}</td><td>${p.score}</td><td>${p.totalScore}</td>`;
+        tbody.appendChild(tr);
+    });
+});
+
+function startRound(){ socket.emit('startRound'); }
+function stopGame(){ location.reload(); }
+
+function playersTotalScore(){
+    const ul=document.getElementById('playersList');
+    return Array.from(ul.children).find(li=>li.innerText.includes(playerName))?.innerText.split('نقاط: ')[1]||0;
+}
+
+// Handle clicking images (each difference = 1 point)
+document.getElementById('leftImage').addEventListener('click', ()=>socket.emit('foundDifference',{points:1}));
+document.getElementById('rightImage').addEventListener('click', ()=>socket.emit('foundDifference',{points:1}));
+</script>
 </body>
 </html>
