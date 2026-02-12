@@ -6,20 +6,45 @@
 <title>POLO - لعبة اختلاف الصور</title>
 <link rel="stylesheet" href="style.css">
 <script src="/socket.io/socket.io.js"></script>
+<style>
+body { font-family:'Cairo',sans-serif; background:#0a1c23; color:white; text-align:center; }
+button { padding:10px 20px; margin:5px; border-radius:10px; font-size:16px; cursor:pointer; }
+#gamePage { display:none; }
+.image-holder { display:inline-block; margin:10px; }
+img { width:300px; height:200px; cursor:pointer; border:3px solid #fff; border-radius:10px; }
+#playerList, #roundResults { margin-top:20px; text-align:right; }
+#adminControls { margin:15px; }
+</style>
 </head>
 <body>
+
 <div id="loginPage">
   <h1>🔥 POLO 🔥</h1>
-  <input type="text" id="playerName" placeholder="اسمك">
-  <input type="password" id="gamePassword" placeholder="كلمة المرور">
-  <button id="loginBtn">دخول</button>
-  <p id="loginError" style="color:red;"></p>
+  <h3>اختر طريقة الدخول:</h3>
+  <button id="playerLoginBtn">دخول اللاعب</button>
+  <button id="adminLoginBtn">دخول الأدمن</button>
+
+  <div id="playerForm" style="display:none; margin-top:15px;">
+    <input type="text" id="playerName" placeholder="اسمك">
+    <input type="password" id="playerPassword" placeholder="كلمة المرور">
+    <button id="loginPlayerSubmit">دخول</button>
+    <p id="loginError" style="color:red;"></p>
+  </div>
+
+  <div id="adminForm" style="display:none; margin-top:15px;">
+    <input type="text" id="adminName" placeholder="اسم الأدمن">
+    <input type="password" id="adminPassword" placeholder="كلمة مرور الأدمن">
+    <button id="loginAdminSubmit">دخول</button>
+    <p id="adminError" style="color:red;"></p>
+  </div>
 </div>
 
-<div id="gamePage" style="display:none;">
+<div id="gamePage">
   <h2>مرحبا <span id="displayName"></span></h2>
-  <div id="adminControls">
-    <button id="startRoundBtn">🚀 بدء الجولة (أدمن)</button>
+
+  <div id="adminControls" style="display:none;">
+    <button id="startRoundBtn">🚀 بدء الجولة</button>
+    <button id="stopRoundBtn">⏹️ إيقاف اللعبة</button>
   </div>
 
   <div id="timer">15</div>
