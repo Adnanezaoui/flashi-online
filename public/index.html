@@ -9,32 +9,32 @@
 </head>
 <body>
 <div id="loginPage">
-    <h1>🔥 POLO 🔥</h1>
-    <input type="text" id="playerName" placeholder="اسمك">
-    <input type="password" id="gamePassword" placeholder="كلمة المرور">
-    <button id="loginBtn">دخول</button>
-    <p id="loginError" style="color:red;"></p>
+  <h1>🔥 POLO 🔥</h1>
+  <input type="text" id="playerName" placeholder="اسمك">
+  <input type="password" id="gamePassword" placeholder="كلمة المرور">
+  <button id="loginBtn">دخول</button>
+  <p id="loginError" style="color:red;"></p>
 </div>
 
 <div id="gamePage" style="display:none;">
-    <h2>مرحبا <span id="displayName"></span></h2>
-    <div id="adminControls">
-        <button id="startRoundBtn">🚀 بدء الجولة (أدمن)</button>
+  <h2>مرحبا <span id="displayName"></span></h2>
+  <div id="adminControls">
+    <button id="startRoundBtn">🚀 بدء الجولة (أدمن)</button>
+  </div>
+
+  <div id="timer">15</div>
+
+  <div id="images">
+    <div class="image-holder">
+      <img id="leftImg" src="">
     </div>
-
-    <div id="timer">15</div>
-
-    <div id="images">
-        <div class="image-holder">
-            <img id="leftImg" src="">
-        </div>
-        <div class="image-holder">
-            <img id="rightImg" src="">
-        </div>
+    <div class="image-holder">
+      <img id="rightImg" src="">
     </div>
+  </div>
 
-    <div id="playerList"></div>
-    <div id="roundResults" style="display:none;"></div>
+  <div id="playerList"></div>
+  <div id="roundResults" style="display:none;"></div>
 </div>
 
 <script src="client.js"></script>
