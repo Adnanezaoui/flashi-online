@@ -3,17 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>POLO - لعبة اختلاف الصور</title>
+<title>POLO Game</title>
 <style>
-body { font-family: Cairo,sans-serif; background:#06242e; color:white; text-align:center; margin:0; padding:0;}
-#loginPage, #gamePage, #resultsPage { display:none; padding:20px;}
-input { padding:10px 15px; border-radius:30px; border:none; font-size:16px; margin:5px;}
-button { padding:10px 20px; border-radius:30px; border:none; cursor:pointer; font-size:16px; margin:5px;}
-#imagesRow { display:flex; justify-content:center; gap:20px; margin-top:20px;}
-.gameImage { width:320px; height:220px; border:4px solid #97d4d4; border-radius:20px; cursor:pointer;}
-table { width:80%; margin:20px auto; border-collapse:collapse; }
-th, td { border:1px solid white; padding:10px; font-size:18px; }
-th { background:#1f5568; }
+body{margin:0;padding:0;font-family:Cairo,sans-serif;background:#06242e;color:white;text-align:center;}
+#loginPage,#gamePage,#resultsPage{display:none;padding:20px;}
+input,button{padding:10px 15px;border-radius:30px;border:none;margin:5px;font-size:16px;cursor:pointer;}
+#imagesRow{display:flex;justify-content:center;gap:20px;position:relative;}
+.gameImage{width:320px;height:220px;border:4px solid #97d4d4;border-radius:20px;cursor:pointer;position:relative;}
+.differenceMarker{position:absolute;width:30px;height:30px;border:3px solid red;border-radius:50%;pointer-events:none;animation:fade 1.5s forwards;}
+@keyframes fade{0%{opacity:1;}100%{opacity:0;transform:scale(1.5);}}
+table{width:80%;margin:20px auto;border-collapse:collapse;}
+th,td{border:1px solid white;padding:10px;font-size:18px;}
+th{background:#1f5568;}
 </style>
 </head>
 <body>
@@ -23,14 +24,14 @@ th { background:#1f5568; }
 <button onclick="showPlayerLogin()">دخول لاعب</button>
 <button onclick="showAdminLogin()">دخول أدمن</button>
 
-<div id="playerLogin" style="display:none; margin-top:20px;">
+<div id="playerLogin" style="display:none;">
 <input id="playerName" placeholder="اسمك"><br>
 <input id="playerPass" placeholder="كلمة المرور"><br>
 <button onclick="joinGame(false)">دخول</button>
 <p id="playerError" style="color:red;"></p>
 </div>
 
-<div id="adminLogin" style="display:none; margin-top:20px;">
+<div id="adminLogin" style="display:none;">
 <input id="adminName" placeholder="اسم الأدمن"><br>
 <input id="adminPass" placeholder="كلمة المرور"><br>
 <button onclick="joinGame(true)">دخول</button>
@@ -53,7 +54,7 @@ th { background:#1f5568; }
 </div>
 
 <div id="resultsPage">
-<h2>نتائج الجولة <span id="resultsRound"></span></h2>
+<h2>نتائج الجولة</h2>
 <table>
 <thead>
 <tr><th>الترتيب</th><th>اسم اللاعب</th><th>نقاط الجولة</th><th>المجموع الكلي</th></tr>
@@ -64,47 +65,41 @@ th { background:#1f5568; }
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io();
-let isAdmin = false;
-let playerName = '';
+const socket=io();
+let isAdmin=false;
+let playerName='';
+let currentDifferences=[];
 
-function showPlayerLogin() {
-    document.getElementById('playerLogin').style.display='block';
-    document.getElementById('adminLogin').style.display='none';
-}
-function showAdminLogin() {
-    document.getElementById('playerLogin').style.display='none';
-    document.getElementById('adminLogin').style.display='block';
-}
+function showPlayerLogin(){document.getElementById('playerLogin').style.display='block';document.getElementById('adminLogin').style.display='none';}
+function showAdminLogin(){document.getElementById('playerLogin').style.display='none';document.getElementById('adminLogin').style.display='block';}
 
-function joinGame(admin=false) {
+function joinGame(admin=false){
     if(admin){
-        const name = document.getElementById('adminName').value.trim();
-        const pass = document.getElementById('adminPass').value.trim();
-        if(pass!=='ADMINPOLO'){ document.getElementById('adminError').innerText='❌ كلمة السر خاطئة'; return;}
-        playerName = name || 'Admin';
-        isAdmin=true;
+        const name=document.getElementById('adminName').value.trim();
+        const pass=document.getElementById('adminPass').value.trim();
+        if(pass!=='ADMINPOLO'){document.getElementById('adminError').innerText='❌ كلمة السر خاطئة';return;}
+        playerName=name||'Admin';isAdmin=true;
     }else{
-        const name = document.getElementById('playerName').value.trim();
-        const pass = document.getElementById('playerPass').value.trim();
-        if(pass!=='POLO FAMILY'){ document.getElementById('playerError').innerText='❌ كلمة السر خاطئة'; return;}
-        playerName=name || 'زائر';
+        const name=document.getElementById('playerName').value.trim();
+        const pass=document.getElementById('playerPass').value.trim();
+        if(pass!=='POLO FAMILY'){document.getElementById('playerError').innerText='❌ كلمة السر خاطئة';return;}
+        playerName=name||'زائر';
     }
     socket.emit('join',{name:playerName,isAdmin});
     document.getElementById('loginPage').style.display='none';
     document.getElementById('gamePage').style.display='block';
-    if(isAdmin){ document.getElementById('startBtn').style.display='inline-block'; document.getElementById('stopBtn').style.display='inline-block'; }
+    if(isAdmin){document.getElementById('startBtn').style.display='inline-block';document.getElementById('stopBtn').style.display='inline-block';}
 }
 
 // Update players list
-socket.on('players', list=>{
+socket.on('players',list=>{
     const ul=document.getElementById('playersList');
     ul.innerHTML='';
-    list.forEach(p=>{ const li=document.createElement('li'); li.innerText=`${p.name} - نقاط: ${p.totalScore}`; ul.appendChild(li); });
+    list.forEach(p=>{const li=document.createElement('li');li.innerText=`${p.name} - نقاط: ${p.totalScore}`;ul.appendChild(li);});
 });
 
 // New round
-socket.on('newRound', data=>{
+socket.on('newRound',data=>{
     document.getElementById('gamePage').style.display='block';
     document.getElementById('resultsPage').style.display='none';
     document.getElementById('roundNum').innerText=data.round;
@@ -112,18 +107,27 @@ socket.on('newRound', data=>{
     document.getElementById('rightImage').src=data.image.right;
     document.getElementById('playerScore').innerText='0';
     document.getElementById('playerTotal').innerText=playersTotalScore();
+    currentDifferences=data.image.differences;
 });
 
 // Timer
-socket.on('timer', t=>{
-    document.getElementById('timer').innerText=t;
+socket.on('timer',t=>{document.getElementById('timer').innerText=t;});
+
+// Mark difference
+socket.on('markDifference',({playerId,x,y})=>{
+    const rect=document.getElementById('imagesRow').getBoundingClientRect();
+    const marker=document.createElement('div');
+    marker.className='differenceMarker';
+    marker.style.left=(rect.left+rect.width*x-15)+'px';
+    marker.style.top=(rect.top+rect.height*y-15)+'px';
+    document.body.appendChild(marker);
+    setTimeout(()=>marker.remove(),1500);
 });
 
 // Round ended
-socket.on('roundEnded', results=>{
+socket.on('roundEnded',results=>{
     document.getElementById('gamePage').style.display='none';
     document.getElementById('resultsPage').style.display='block';
-    document.getElementById('resultsRound').innerText=results[0]?.round||'';
     const tbody=document.getElementById('resultsTable');
     tbody.innerHTML='';
     results.sort((a,b)=>b.totalScore-a.totalScore).forEach((p,i)=>{
@@ -133,17 +137,23 @@ socket.on('roundEnded', results=>{
     });
 });
 
-function startRound(){ socket.emit('startRound'); }
-function stopGame(){ location.reload(); }
+function startRound(){socket.emit('startRound');}
+function stopGame(){location.reload();}
 
 function playersTotalScore(){
     const ul=document.getElementById('playersList');
     return Array.from(ul.children).find(li=>li.innerText.includes(playerName))?.innerText.split('نقاط: ')[1]||0;
 }
 
-// Handle clicking images (each difference = 1 point)
-document.getElementById('leftImage').addEventListener('click', ()=>socket.emit('foundDifference',{points:1}));
-document.getElementById('rightImage').addEventListener('click', ()=>socket.emit('foundDifference',{points:1}));
+// Handle clicking images
+function handleClickImage(e){
+    const rect=e.target.getBoundingClientRect();
+    const x=(event.clientX-rect.left)/rect.width;
+    const y=(event.clientY-rect.top)/rect.height;
+    socket.emit('foundDifference',{x,y});
+}
+document.getElementById('leftImage').addEventListener('click',handleClickImage);
+document.getElementById('rightImage').addEventListener('click',handleClickImage);
 </script>
 </body>
 </html>
