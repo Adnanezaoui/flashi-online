@@ -3,7 +3,6 @@ const socket = io();
 const loginPage = document.getElementById('loginPage');
 const gamePage = document.getElementById('gamePage');
 
-// Buttons/forms
 const playerLoginBtn = document.getElementById('playerLoginBtn');
 const adminLoginBtn = document.getElementById('adminLoginBtn');
 const playerForm = document.getElementById('playerForm');
@@ -31,74 +30,67 @@ let isAdmin = false;
 playerLoginBtn.addEventListener('click', ()=>{ playerForm.style.display="block"; adminForm.style.display="none"; });
 adminLoginBtn.addEventListener('click', ()=>{ adminForm.style.display="block"; playerForm.style.display="none"; });
 
-// -------------------
-// Login Player
+// Player login
 loginPlayerSubmit.addEventListener('click', ()=>{
   const name = document.getElementById('playerName').value.trim();
   const password = document.getElementById('playerPassword').value.trim();
-
   if(password !== "POLO FAMILY"){ loginError.innerText="❌ كلمة المرور خاطئة"; return; }
   if(!name){ loginError.innerText="❌ الرجاء إدخال الاسم"; return; }
-
   playerName = name;
   displayName.innerText = name;
   loginPage.style.display="none";
   gamePage.style.display="block";
-
+  adminControls.style.display="none";
   socket.emit('joinGame', {name});
-  adminControls.style.display="none"; // لاعب لا يرى أزرار
 });
 
-// -------------------
-// Login Admin
+// Admin login
 loginAdminSubmit.addEventListener('click', ()=>{
   const name = document.getElementById('adminName').value.trim();
   const password = document.getElementById('adminPassword').value.trim();
-
   if(password !== "ADMINPOLO"){ adminError.innerText="❌ كلمة مرور الأدمن خاطئة"; return; }
   if(!name){ adminError.innerText="❌ الرجاء إدخال الاسم"; return; }
-
   playerName = name;
   displayName.innerText = name;
   loginPage.style.display="none";
   gamePage.style.display="block";
-
-  socket.emit('joinGame', {name});
   isAdmin = true;
-  adminControls.style.display="block"; // الأدمن يرى أزرار
+  adminControls.style.display="block";
+  socket.emit('joinGame', {name});
 });
 
-// -------------------
 // Admin buttons
 startRoundBtn.addEventListener('click', ()=>socket.emit('startRound'));
 stopRoundBtn.addEventListener('click', ()=>socket.emit('stopRound'));
 
-// -------------------
+// Player clicks
+leftImg.addEventListener('click', ()=>socket.emit('foundDiff'));
+rightImg.addEventListener('click', ()=>socket.emit('foundDiff'));
+
 // Socket events
-socket.on('roundStart', ({level, image, time})=>{
+socket.on('roundStart', ({image,time})=>{
   timerDiv.innerText = time;
   leftImg.src = image.left;
   rightImg.src = image.right;
-  roundResults.style.display = "none";
+  roundResults.style.display="none";
+  document.getElementById('images').style.display="block";
 });
 
 socket.on('timer', time=>{ timerDiv.innerText = time; });
 
 socket.on('roundEnd', players=>{
+  document.getElementById('images').style.display="none";
   roundResults.style.display="block";
-  roundResults.innerHTML = "<h3>نتائج الجولة:</h3>" +
-      players.map(p=>`<p>${p.name} - نقاط: ${p.score}</p>`).join("");
+  let html = `<h3>نتائج الجولة (المجموع الحالي):</h3>
+              <table><tr><th>اللاعب</th><th>نقاط الجولة</th><th>المجموع الكلي</th></tr>`;
+  players.forEach(p=>{
+    html += `<tr><td>${p.name}</td><td>${p.roundScore}</td><td>${p.totalScore}</td></tr>`;
+  });
+  html += `</table>`;
+  roundResults.innerHTML = html;
 });
 
 socket.on('updatePlayers', players=>{
   playerList.innerHTML = "<h3>اللاعبون الحاليون:</h3>" +
-      players.map(p=>`<p>${p.name} - مجموع النقاط: ${p.score}</p>`).join("");
+      players.map(p=>`<p>${p.name} - مجموع النقاط: ${p.totalScore}</p>`).join("");
 });
-
-socket.on('nextRoundReady', ()=>{
-  roundResults.style.display="none";
-});
-
-// Player clicks differences
-rightImg.addEventListener('click', ()=>socket.emit('foundDiff'));
-leftImg.addEventListener('click', ()=>socket.emit('foundDiff'));
