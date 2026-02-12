@@ -3,157 +3,96 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>POLO Game</title>
+<title>POLO - تسجيل الدخول</title>
 <style>
-body{margin:0;padding:0;font-family:Cairo,sans-serif;background:#06242e;color:white;text-align:center;}
-#loginPage,#gamePage,#resultsPage{display:none;padding:20px;}
-input,button{padding:10px 15px;border-radius:30px;border:none;margin:5px;font-size:16px;cursor:pointer;}
-#imagesRow{display:flex;justify-content:center;gap:20px;position:relative;}
-.gameImage{width:320px;height:220px;border:4px solid #97d4d4;border-radius:20px;cursor:pointer;position:relative;}
-.differenceMarker{position:absolute;width:30px;height:30px;border:3px solid red;border-radius:50%;pointer-events:none;animation:fade 1.5s forwards;}
-@keyframes fade{0%{opacity:1;}100%{opacity:0;transform:scale(1.5);}}
-table{width:80%;margin:20px auto;border-collapse:collapse;}
-th,td{border:1px solid white;padding:10px;font-size:18px;}
-th{background:#1f5568;}
+body {
+    margin:0;
+    padding:0;
+    font-family:Cairo, sans-serif;
+    background: linear-gradient(135deg, #06242e, #0d5265);
+    color:white;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+    text-align:center;
+}
+h1 { font-size:48px; margin-bottom:20px; color:#ffd700; }
+button {
+    padding:12px 20px;
+    border-radius:30px;
+    border:none;
+    margin:10px;
+    font-size:18px;
+    cursor:pointer;
+    background:#1f5568;
+    color:white;
+    transition:0.3s;
+}
+button:hover { background:#3a7d92; }
+.loginForm {
+    margin-top:20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    background: rgba(0,0,0,0.4);
+    padding:20px;
+    border-radius:20px;
+}
+input {
+    padding:10px;
+    margin:5px;
+    border-radius:20px;
+    border:none;
+    font-size:16px;
+    width:200px;
+}
+#errorMsg { color:#ff5555; margin-top:10px; }
 </style>
 </head>
 <body>
 
-<div id="loginPage">
 <h1>🔥 POLO 🔥</h1>
-<button onclick="showPlayerLogin()">دخول لاعب</button>
-<button onclick="showAdminLogin()">دخول أدمن</button>
 
-<div id="playerLogin" style="display:none;">
-<input id="playerName" placeholder="اسمك"><br>
-<input id="playerPass" placeholder="كلمة المرور"><br>
-<button onclick="joinGame(false)">دخول</button>
-<p id="playerError" style="color:red;"></p>
+<div id="loginOptions">
+    <button onclick="showForm('player')">دخول لاعب</button>
+    <button onclick="showForm('admin')">دخول أدمن</button>
 </div>
 
-<div id="adminLogin" style="display:none;">
-<input id="adminName" placeholder="اسم الأدمن"><br>
-<input id="adminPass" placeholder="كلمة المرور"><br>
-<button onclick="joinGame(true)">دخول</button>
-<p id="adminError" style="color:red;"></p>
-</div>
-</div>
-
-<div id="gamePage">
-<h2>مرحلة <span id="roundNum"></span></h2>
-<p>الوقت المتبقي: <span id="timer">0</span> ثواني</p>
-<div id="imagesRow">
-<img id="leftImage" class="gameImage">
-<img id="rightImage" class="gameImage">
-</div>
-<p>نقاطك: <span id="playerScore">0</span> | المجموع: <span id="playerTotal">0</span></p>
-<h3>اللاعبون المتصلون:</h3>
-<ul id="playersList"></ul>
-<button id="startBtn" style="display:none;" onclick="startRound()">▶️ بدء الجولة</button>
-<button id="stopBtn" style="display:none;" onclick="stopGame()">⏹️ إيقاف اللعبة</button>
+<div id="playerForm" class="loginForm" style="display:none;">
+    <input id="playerName" placeholder="اسمك">
+    <input id="playerPass" placeholder="كلمة المرور">
+    <button onclick="joinGame(false)">دخول</button>
+    <p id="playerError" style="color:red;"></p>
 </div>
 
-<div id="resultsPage">
-<h2>نتائج الجولة</h2>
-<table>
-<thead>
-<tr><th>الترتيب</th><th>اسم اللاعب</th><th>نقاط الجولة</th><th>المجموع الكلي</th></tr>
-</thead>
-<tbody id="resultsTable"></tbody>
-</table>
+<div id="adminForm" class="loginForm" style="display:none;">
+    <input id="adminName" placeholder="اسم الأدمن">
+    <input id="adminPass" placeholder="كلمة المرور">
+    <button onclick="joinGame(true)">دخول</button>
+    <p id="adminError" style="color:red;"></p>
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
 <script>
-const socket=io();
-let isAdmin=false;
-let playerName='';
-let currentDifferences=[];
+function showForm(type){
+    document.getElementById('playerForm').style.display = (type==='player') ? 'flex' : 'none';
+    document.getElementById('adminForm').style.display = (type==='admin') ? 'flex' : 'none';
+}
 
-function showPlayerLogin(){document.getElementById('playerLogin').style.display='block';document.getElementById('adminLogin').style.display='none';}
-function showAdminLogin(){document.getElementById('playerLogin').style.display='none';document.getElementById('adminLogin').style.display='block';}
-
-function joinGame(admin=false){
-    if(admin){
-        const name=document.getElementById('adminName').value.trim();
-        const pass=document.getElementById('adminPass').value.trim();
-        if(pass!=='ADMINPOLO'){document.getElementById('adminError').innerText='❌ كلمة السر خاطئة';return;}
-        playerName=name||'Admin';isAdmin=true;
-    }else{
-        const name=document.getElementById('playerName').value.trim();
-        const pass=document.getElementById('playerPass').value.trim();
-        if(pass!=='POLO FAMILY'){document.getElementById('playerError').innerText='❌ كلمة السر خاطئة';return;}
-        playerName=name||'زائر';
+// Fake joinGame for now to test interface
+function joinGame(isAdmin){
+    if(isAdmin){
+        const pass=document.getElementById('adminPass').value;
+        if(pass!=='ADMINPOLO'){document.getElementById('adminError').innerText='❌ كلمة السر خاطئة'; return;}
+        alert('تم دخول الأدمن بنجاح!');
+    } else {
+        const pass=document.getElementById('playerPass').value;
+        if(pass!=='POLO FAMILY'){document.getElementById('playerError').innerText='❌ كلمة السر خاطئة'; return;}
+        alert('تم دخول اللاعب بنجاح!');
     }
-    socket.emit('join',{name:playerName,isAdmin});
-    document.getElementById('loginPage').style.display='none';
-    document.getElementById('gamePage').style.display='block';
-    if(isAdmin){document.getElementById('startBtn').style.display='inline-block';document.getElementById('stopBtn').style.display='inline-block';}
 }
-
-// Update players list
-socket.on('players',list=>{
-    const ul=document.getElementById('playersList');
-    ul.innerHTML='';
-    list.forEach(p=>{const li=document.createElement('li');li.innerText=`${p.name} - نقاط: ${p.totalScore}`;ul.appendChild(li);});
-});
-
-// New round
-socket.on('newRound',data=>{
-    document.getElementById('gamePage').style.display='block';
-    document.getElementById('resultsPage').style.display='none';
-    document.getElementById('roundNum').innerText=data.round;
-    document.getElementById('leftImage').src=data.image.left;
-    document.getElementById('rightImage').src=data.image.right;
-    document.getElementById('playerScore').innerText='0';
-    document.getElementById('playerTotal').innerText=playersTotalScore();
-    currentDifferences=data.image.differences;
-});
-
-// Timer
-socket.on('timer',t=>{document.getElementById('timer').innerText=t;});
-
-// Mark difference
-socket.on('markDifference',({playerId,x,y})=>{
-    const rect=document.getElementById('imagesRow').getBoundingClientRect();
-    const marker=document.createElement('div');
-    marker.className='differenceMarker';
-    marker.style.left=(rect.left+rect.width*x-15)+'px';
-    marker.style.top=(rect.top+rect.height*y-15)+'px';
-    document.body.appendChild(marker);
-    setTimeout(()=>marker.remove(),1500);
-});
-
-// Round ended
-socket.on('roundEnded',results=>{
-    document.getElementById('gamePage').style.display='none';
-    document.getElementById('resultsPage').style.display='block';
-    const tbody=document.getElementById('resultsTable');
-    tbody.innerHTML='';
-    results.sort((a,b)=>b.totalScore-a.totalScore).forEach((p,i)=>{
-        const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${i+1}</td><td>${p.name}</td><td>${p.score}</td><td>${p.totalScore}</td>`;
-        tbody.appendChild(tr);
-    });
-});
-
-function startRound(){socket.emit('startRound');}
-function stopGame(){location.reload();}
-
-function playersTotalScore(){
-    const ul=document.getElementById('playersList');
-    return Array.from(ul.children).find(li=>li.innerText.includes(playerName))?.innerText.split('نقاط: ')[1]||0;
-}
-
-// Handle clicking images
-function handleClickImage(e){
-    const rect=e.target.getBoundingClientRect();
-    const x=(event.clientX-rect.left)/rect.width;
-    const y=(event.clientY-rect.top)/rect.height;
-    socket.emit('foundDifference',{x,y});
-}
-document.getElementById('leftImage').addEventListener('click',handleClickImage);
-document.getElementById('rightImage').addEventListener('click',handleClickImage);
 </script>
+
 </body>
 </html>
