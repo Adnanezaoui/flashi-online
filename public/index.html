@@ -4,183 +4,39 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>POLO - لعبة اختلاف الصور</title>
-<style>
-    * {margin:0; padding:0; box-sizing:border-box; font-family:'Cairo','Segoe UI',sans-serif;}
-    body {background: linear-gradient(145deg,#0a1c23 0%,#06242e 100%); display:flex; justify-content:center; align-items:center; min-height:100vh;}
-    #loginPage, #gamePage, #roundResult {width:100%; max-width:1200px; color:white; text-align:center;}
-    input, button {font-size:18px; padding:12px 20px; border-radius:40px; border:none; outline:none;}
-    button {cursor:pointer; background:#fecb57; font-weight:bold; transition:.2s; margin:10px;}
-    button:hover {opacity:.85;}
-    #gamePage {display:none;}
-    .game-wrapper {display:flex; flex-wrap:wrap; justify-content:center; gap:20px;}
-    .main-game, .sidebar {background:#1f5568; border-radius:30px; padding:20px; min-width:300px;}
-    .main-game {flex:2;}
-    .sidebar {flex:1;}
-    .images-row {display:flex; justify-content:center; gap:20px; flex-wrap:wrap; margin:20px 0;}
-    .game-canvas {width:320px; height:220px; border-radius:20px; border:3px solid #97d4d4; overflow:hidden; cursor:pointer;}
-    .game-canvas img {width:100%; height:100%; object-fit:cover;}
-    .scoreboard, .round-timer {background:#0b323b; padding:15px 20px; border-radius:30px; font-size:20px; margin:10px;}
-    .player-list {background:#163a47; border-radius:20px; padding:10px; margin-top:20px; text-align:right; color:white;}
-    .player-item {display:flex; justify-content:space-between; margin:5px 0; padding:5px 10px; background:#1e4e5c; border-radius:15px;}
-    .admin-controls {margin-top:20px;}
-</style>
+<link rel="stylesheet" href="style.css">
+<script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-
-<!-- ===== Landing / Login Page ===== -->
 <div id="loginPage">
-    <h1 style="font-size:60px; margin-bottom:30px;">🔥 POLO 🔥</h1>
-    <input type="text" id="playerName" placeholder="أدخل اسمك"><br><br>
-    <input type="password" id="gamePassword" placeholder="كلمة المرور"><br><br>
-    <button onclick="enterGame()">دخول</button>
-    <p id="loginError" style="color:red; margin-top:10px;"></p>
+    <h1>🔥 POLO 🔥</h1>
+    <input type="text" id="playerName" placeholder="اسمك">
+    <input type="password" id="gamePassword" placeholder="كلمة المرور">
+    <button id="loginBtn">دخول</button>
+    <p id="loginError" style="color:red;"></p>
 </div>
 
-<!-- ===== Game Page ===== -->
-<div id="gamePage">
-    <h2 id="welcomePlayer"></h2>
-    <div class="game-wrapper">
-        <div class="main-game">
-            <div class="images-row">
-                <div class="game-canvas"><img id="leftImg" src=""></div>
-                <div class="game-canvas"><img id="rightImg" src=""></div>
-            </div>
-            <div class="scoreboard">
-                نقاطك: <span id="playerScore">0</span>
-            </div>
-            <div class="round-timer">
-                وقت الجولة: <span id="roundTimer">15</span> ثانية
-            </div>
-            <div class="admin-controls" id="adminControls" style="display:none;">
-                <button onclick="startRound()">▶️ بدء الجولة</button>
-                <button onclick="stopGame()">⏹️ إيقاف اللعبة</button>
-            </div>
-        </div>
+<div id="gamePage" style="display:none;">
+    <h2>مرحبا <span id="displayName"></span></h2>
+    <div id="adminControls">
+        <button id="startRoundBtn">🚀 بدء الجولة (أدمن)</button>
+    </div>
 
-        <div class="sidebar">
-            <h3>ترتيب اللاعبين</h3>
-            <div id="leaderboard" class="player-list"></div>
+    <div id="timer">15</div>
+
+    <div id="images">
+        <div class="image-holder">
+            <img id="leftImg" src="">
+        </div>
+        <div class="image-holder">
+            <img id="rightImg" src="">
         </div>
     </div>
+
+    <div id="playerList"></div>
+    <div id="roundResults" style="display:none;"></div>
 </div>
 
-<!-- ===== Round Result Page ===== -->
-<div id="roundResult" style="display:none;">
-    <h2>🏆 نتائج الجولة 🏆</h2>
-    <div id="roundScores" class="player-list"></div>
-    <p>الانتظار 5 ثواني قبل الجولة التالية...</p>
-</div>
-
-<script>
-let players = [];
-let playerName = "";
-let playerScore = 0;
-let roundTime = 15;
-let roundInterval = null;
-let currentRound = 0;
-let images = [
-    {left:"https://picsum.photos/id/1015/400/300", right:"https://picsum.photos/id/1015/400/300"},
-    {left:"https://picsum.photos/id/1016/400/300", right:"https://picsum.photos/id/1016/400/300"},
-    {left:"https://picsum.photos/id/1018/400/300", right:"https://picsum.photos/id/1018/400/300"},
-    {left:"https://picsum.photos/id/1020/400/300", right:"https://picsum.photos/id/1020/400/300"},
-    {left:"https://picsum.photos/id/1024/400/300", right:"https://picsum.photos/id/1024/400/300"}
-];
-let gameActive = false;
-let adminPassword = "POLO FAMILY";
-
-// ===== Landing/Login =====
-function enterGame() {
-    const nameInput = document.getElementById("playerName").value.trim();
-    const passInput = document.getElementById("gamePassword").value.trim();
-    if(passInput !== adminPassword) {document.getElementById("loginError").innerText="❌ كلمة المرور خاطئة"; return;}
-    if(nameInput==="") {document.getElementById("loginError").innerText="❌ الرجاء إدخال الاسم"; return;}
-    playerName = nameInput;
-    players.push({name:playerName, score:0});
-    document.getElementById("loginPage").style.display="none";
-    document.getElementById("gamePage").style.display="block";
-    document.getElementById("welcomePlayer").innerText = `مرحباً ${playerName} 🎮`;
-    updateLeaderboard();
-    // Show admin controls only for first player (admin)
-    document.getElementById("adminControls").style.display="block";
-}
-
-// ===== Start Round =====
-function startRound() {
-    gameActive = true;
-    playerScore = 0;
-    document.getElementById("playerScore").innerText=playerScore;
-    currentRound++;
-    loadImages();
-    roundTime=15;
-    document.getElementById("roundTimer").innerText=roundTime;
-    roundInterval = setInterval(() => {
-        if(roundTime>0){ roundTime--; document.getElementById("roundTimer").innerText=roundTime; }
-        else { endRound(); }
-    },1000);
-}
-
-// ===== Load Images =====
-function loadImages() {
-    let img = images[currentRound % images.length];
-    document.getElementById("leftImg").src = img.left;
-    document.getElementById("rightImg").src = img.right;
-}
-
-// ===== Handle Clicks =====
-document.getElementById("leftImg").addEventListener("click", () => { scorePoint(); });
-document.getElementById("rightImg").addEventListener("click", () => { scorePoint(); });
-
-function scorePoint() {
-    if(!gameActive) return;
-    playerScore++;
-    document.getElementById("playerScore").innerText=playerScore;
-    // update player in array
-    let p = players.find(p=>p.name===playerName);
-    if(p) p.score = playerScore;
-    updateLeaderboard();
-}
-
-// ===== End Round =====
-function endRound() {
-    clearInterval(roundInterval);
-    gameActive=false;
-    showRoundResult();
-}
-
-// ===== Show Round Result =====
-function showRoundResult() {
-    document.getElementById("gamePage").style.display="none";
-    document.getElementById("roundResult").style.display="block";
-    let html = "";
-    players.sort((a,b)=>b.score-a.score);
-    players.forEach((p,i)=>{
-        html += `<div class="player-item">${i+1}. ${p.name} <span>${p.score} نقطة</span></div>`;
-    });
-    document.getElementById("roundScores").innerHTML=html;
-    setTimeout(() => {
-        document.getElementById("roundResult").style.display="none";
-        document.getElementById("gamePage").style.display="block";
-        startRound();
-    },5000); // 5 seconds wait
-}
-
-// ===== Update Leaderboard =====
-function updateLeaderboard() {
-    let html="";
-    players.sort((a,b)=>b.score-a.score);
-    players.forEach((p,i)=>{
-        html += `<div class="player-item">${i+1}. ${p.name} <span>${p.score}</span></div>`;
-    });
-    document.getElementById("leaderboard").innerHTML = html;
-}
-
-// ===== Stop Game =====
-function stopGame() {
-    clearInterval(roundInterval);
-    alert("⏹️ تم إيقاف اللعبة من قبل الأدمن");
-    gameActive=false;
-}
-</script>
-
+<script src="client.js"></script>
 </body>
 </html>
