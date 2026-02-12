@@ -5,28 +5,130 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>POLO - لعبة اختلاف الصور</title>
 <script src="/socket.io/socket.io.js"></script>
+
 <style>
-body { font-family:'Cairo',sans-serif; background:#0a1c23; color:white; text-align:center; margin:0; padding:0;}
-button { padding:10px 20px; margin:5px; border-radius:10px; font-size:16px; cursor:pointer; }
-#gamePage { display:none; }
-#loginPage { margin-top:50px;}
-#playerList, #roundResults { margin-top:20px; text-align:right; max-width:400px; margin-left:auto; margin-right:auto;}
-#images { margin-top:20px; }
-.image-holder { display:inline-block; margin:10px; }
-img { width:300px; height:200px; cursor:pointer; border:3px solid #fff; border-radius:10px; }
-table { width:80%; margin:auto; border-collapse: collapse; margin-top:10px;}
-table, th, td { border:1px solid #fff; padding:8px;}
-th { background:#1e4e5c; }
-td { background:#163a47; }
-#adminControls { margin:15px;}
-#timer { font-size:32px; margin-top:10px; color:#fdca40;}
+body{
+  font-family:'Cairo',sans-serif;
+  background:linear-gradient(135deg,#0a1c23,#123845);
+  color:white;
+  text-align:center;
+  margin:0;
+  padding:0;
+}
+
+h1{margin-top:30px;color:#fdca40;}
+
+button{
+  padding:10px 20px;
+  margin:5px;
+  border-radius:10px;
+  font-size:16px;
+  cursor:pointer;
+  border:none;
+  background:#1e4e5c;
+  color:white;
+  transition:0.3s;
+}
+button:hover{background:#2c6b7e;}
+
+input{
+  padding:8px;
+  margin:5px;
+  border-radius:6px;
+  border:none;
+}
+
+#gamePage{display:none;padding-bottom:30px;}
+
+#adminControls{margin:15px;}
+
+#timer{
+  font-size:40px;
+  margin-top:10px;
+  color:#fdca40;
+  font-weight:bold;
+}
+
+#images{
+  margin-top:20px;
+  display:flex;
+  justify-content:center;
+  gap:30px;
+}
+
+.image-holder{
+  position:relative;
+}
+
+img{
+  width:320px;
+  height:220px;
+  cursor:pointer;
+  border:4px solid #fff;
+  border-radius:15px;
+}
+
+.marker{
+  position:absolute;
+  width:30px;
+  height:30px;
+  border:3px solid lime;
+  border-radius:50%;
+  pointer-events:none;
+}
+
+.marker.wrong{
+  border-color:red;
+}
+
+#playerList{
+  margin-top:20px;
+  max-width:600px;
+  margin-left:auto;
+  margin-right:auto;
+  background:#163a47;
+  padding:10px;
+  border-radius:10px;
+}
+
+#playerCount{
+  margin-top:10px;
+  font-weight:bold;
+  color:#fdca40;
+}
+
+#roundResults{
+  display:none;
+  margin-top:20px;
+}
+
+table{
+  width:90%;
+  margin:auto;
+  border-collapse: collapse;
+}
+
+table,th,td{
+  border:1px solid #fff;
+  padding:10px;
+}
+
+th{
+  background:#1e4e5c;
+}
+
+td{
+  background:#163a47;
+}
 </style>
 </head>
+
 <body>
 
 <div id="loginPage">
   <h1>🔥 POLO 🔥</h1>
   <h3>اختر طريقة الدخول:</h3>
+
   <button id="playerLoginBtn">دخول اللاعب</button>
   <button id="adminLoginBtn">دخول الأدمن</button>
 
@@ -59,13 +161,31 @@ td { background:#163a47; }
     <div class="image-holder">
       <img id="leftImg" src="">
     </div>
-    <div class="image-holder">
+
+    <div class="image-holder" id="rightHolder">
       <img id="rightImg" src="">
     </div>
   </div>
 
+  <div id="playerCount"></div>
+
   <div id="playerList"></div>
-  <div id="roundResults" style="display:none;"></div>
+
+  <div id="roundResults">
+    <h2>🏆 نتائج الجولة</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>الترتيب</th>
+          <th>الاسم</th>
+          <th>نقاط الجولة</th>
+          <th>المجموع الكلي</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+  </div>
+
 </div>
 
 <script src="client.js"></script>
