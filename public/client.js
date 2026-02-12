@@ -1,56 +1,75 @@
-const socket = io();
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POLO - لعبة اختلاف الصور</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+body { font-family:'Cairo',sans-serif; background:#0a1c23; color:white; text-align:center; margin:0; padding:0;}
+button { padding:10px 20px; margin:5px; border-radius:10px; font-size:16px; cursor:pointer; }
+#gamePage { display:none; }
+#loginPage { margin-top:50px;}
+#playerList, #roundResults { margin-top:20px; text-align:right; max-width:500px; margin-left:auto; margin-right:auto;}
+#images { margin-top:20px; position:relative;}
+.image-holder { display:inline-block; margin:10px; position:relative;}
+img { width:300px; height:200px; cursor:pointer; border:3px solid #fff; border-radius:10px; }
+.marker { position:absolute; border:3px solid red; border-radius:50%; pointer-events:none; animation:fadeout 1s forwards; }
+@keyframes fadeout { 0% {opacity:1;} 100% {opacity:0;} }
+table { width:80%; margin:auto; border-collapse: collapse; margin-top:10px;}
+table, th, td { border:1px solid #fff; padding:8px;}
+th { background:#1e4e5c; }
+td { background:#163a47; }
+#adminControls { margin:15px;}
+#timer { font-size:32px; margin-top:10px; color:#fdca40;}
+</style>
+</head>
+<body>
 
-let timerInterval;
+<div id="loginPage">
+  <h1>🔥 POLO 🔥</h1>
+  <h3>اختر طريقة الدخول:</h3>
+  <button id="playerLoginBtn">دخول اللاعب</button>
+  <button id="adminLoginBtn">دخول الأدمن</button>
 
-function join() {
-  const name = document.getElementById("name").value;
-  socket.emit("join", name);
-}
+  <div id="playerForm" style="display:none; margin-top:15px;">
+    <input type="text" id="playerName" placeholder="اسمك">
+    <input type="password" id="playerPassword" placeholder="كلمة المرور">
+    <button id="loginPlayerSubmit">دخول</button>
+    <p id="loginError" style="color:red;"></p>
+  </div>
 
-function startGame() {
-  socket.emit("start");
-}
+  <div id="adminForm" style="display:none; margin-top:15px;">
+    <input type="text" id="adminName" placeholder="اسم الأدمن">
+    <input type="password" id="adminPassword" placeholder="كلمة مرور الأدمن">
+    <button id="loginAdminSubmit">دخول</button>
+    <p id="adminError" style="color:red;"></p>
+  </div>
+</div>
 
-socket.on("roundStarted", (data) => {
+<div id="gamePage">
+  <h2>مرحبا <span id="displayName"></span></h2>
 
-  document.getElementById("left").src = data.image;
-  document.getElementById("right").src = data.image;
+  <div id="adminControls" style="display:none;">
+    <button id="startRoundBtn">🚀 بدء الجولة</button>
+    <button id="stopRoundBtn">⏹️ إيقاف اللعبة</button>
+  </div>
 
-  startTimer(data.time);
-});
+  <div id="timer">15</div>
 
-socket.on("roundEnded", (leaderboard) => {
-  alert("Round Finished!");
-});
+  <div id="images">
+    <div class="image-holder">
+      <img id="leftImg" src="">
+    </div>
+    <div class="image-holder">
+      <img id="rightImg" src="">
+    </div>
+  </div>
 
-socket.on("playersUpdate", (leaderboard) => {
+  <div id="playerList"></div>
+  <div id="roundResults" style="display:none;"></div>
+</div>
 
-  const board = document.getElementById("board");
-  board.innerHTML = "";
-
-  leaderboard.forEach(p => {
-    board.innerHTML += `
-      <tr>
-        <td>${p.name}</td>
-        <td>${p.score}</td>
-      </tr>
-    `;
-  });
-});
-
-document.getElementById("right").addEventListener("click", () => {
-  socket.emit("score");
-});
-
-function startTimer(seconds){
-  clearInterval(timerInterval);
-  let time = seconds;
-
-  timerInterval = setInterval(() => {
-    document.getElementById("timer").innerText = time;
-    time--;
-    if(time < 0){
-      clearInterval(timerInterval);
-    }
-  }, 1000);
-}
+<script src="client.js"></script>
+</body>
+</html>
