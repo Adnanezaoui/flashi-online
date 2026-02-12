@@ -1,7 +1,7 @@
 {
-  "name": "tournament-game",
+  "name": "polo-game",
   "version": "1.0.0",
-  "description": "Multiplayer Tournament Game",
+  "description": "POLO Real Time Game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
