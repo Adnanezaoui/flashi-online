@@ -3,14 +3,6 @@ const http = require("http");
 const { Server } = require("socket.io");
 
 const app = express();
-app.use((req, res, next) => {
-  res.setHeader(
-    "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.socket.io;"
-  );
-  next();
-});
-
 const server = http.createServer(app);
 const io = new Server(server);
 
