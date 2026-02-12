@@ -1,75 +1,150 @@
-<!DOCTYPE html>
-<html lang="ar">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>POLO - لعبة اختلاف الصور</title>
-<script src="/socket.io/socket.io.js"></script>
-<style>
-body { font-family:'Cairo',sans-serif; background:#0a1c23; color:white; text-align:center; margin:0; padding:0;}
-button { padding:10px 20px; margin:5px; border-radius:10px; font-size:16px; cursor:pointer; }
-#gamePage { display:none; }
-#loginPage { margin-top:50px;}
-#playerList, #roundResults { margin-top:20px; text-align:right; max-width:500px; margin-left:auto; margin-right:auto;}
-#images { margin-top:20px; position:relative;}
-.image-holder { display:inline-block; margin:10px; position:relative;}
-img { width:300px; height:200px; cursor:pointer; border:3px solid #fff; border-radius:10px; }
-.marker { position:absolute; border:3px solid red; border-radius:50%; pointer-events:none; animation:fadeout 1s forwards; }
-@keyframes fadeout { 0% {opacity:1;} 100% {opacity:0;} }
-table { width:80%; margin:auto; border-collapse: collapse; margin-top:10px;}
-table, th, td { border:1px solid #fff; padding:8px;}
-th { background:#1e4e5c; }
-td { background:#163a47; }
-#adminControls { margin:15px;}
-#timer { font-size:32px; margin-top:10px; color:#fdca40;}
-</style>
-</head>
-<body>
+const socket = io();
 
-<div id="loginPage">
-  <h1>🔥 POLO 🔥</h1>
-  <h3>اختر طريقة الدخول:</h3>
-  <button id="playerLoginBtn">دخول اللاعب</button>
-  <button id="adminLoginBtn">دخول الأدمن</button>
+// DOM Elements
+const loginPage = document.getElementById('loginPage');
+const gamePage = document.getElementById('gamePage');
+const playerLoginBtn = document.getElementById('playerLoginBtn');
+const adminLoginBtn = document.getElementById('adminLoginBtn');
+const playerForm = document.getElementById('playerForm');
+const adminForm = document.getElementById('adminForm');
+const loginPlayerSubmit = document.getElementById('loginPlayerSubmit');
+const loginAdminSubmit = document.getElementById('loginAdminSubmit');
+const loginError = document.getElementById('loginError');
+const adminError = document.getElementById('adminError');
+const displayName = document.getElementById('displayName');
+const adminControls = document.getElementById('adminControls');
+const startRoundBtn = document.getElementById('startRoundBtn');
+const stopRoundBtn = document.getElementById('stopRoundBtn');
+const timerEl = document.getElementById('timer');
+const leftImg = document.getElementById('leftImg');
+const rightImg = document.getElementById('rightImg');
+const playerListEl = document.getElementById('playerList');
+const roundResultsEl = document.getElementById('roundResults');
 
-  <div id="playerForm" style="display:none; margin-top:15px;">
-    <input type="text" id="playerName" placeholder="اسمك">
-    <input type="password" id="playerPassword" placeholder="كلمة المرور">
-    <button id="loginPlayerSubmit">دخول</button>
-    <p id="loginError" style="color:red;"></p>
-  </div>
+let isAdmin = false;
+let playerNameVal = "";
+let roundTime = 15;
+let roundTimer;
+let currentRound = 1;
+let maxRounds = 10;
+let imagesPerRound = 300;
 
-  <div id="adminForm" style="display:none; margin-top:15px;">
-    <input type="text" id="adminName" placeholder="اسم الأدمن">
-    <input type="password" id="adminPassword" placeholder="كلمة مرور الأدمن">
-    <button id="loginAdminSubmit">دخول</button>
-    <p id="adminError" style="color:red;"></p>
-  </div>
-</div>
+// Dummy images with picsum.photos
+function getImage(index){
+  return `https://picsum.photos/seed/${index}/600/400`;
+}
 
-<div id="gamePage">
-  <h2>مرحبا <span id="displayName"></span></h2>
+// Differences positions (random for demo)
+function generateDifferences(){
+  let diffs = [];
+  for(let i=0;i<5;i++){
+    diffs.push({x: Math.random()*300, y:Math.random()*200});
+  }
+  return diffs;
+}
 
-  <div id="adminControls" style="display:none;">
-    <button id="startRoundBtn">🚀 بدء الجولة</button>
-    <button id="stopRoundBtn">⏹️ إيقاف اللعبة</button>
-  </div>
+// Login buttons
+playerLoginBtn.onclick = ()=>{ playerForm.style.display='block'; adminForm.style.display='none'; }
+adminLoginBtn.onclick = ()=>{ adminForm.style.display='block'; playerForm.style.display='none'; }
 
-  <div id="timer">15</div>
+// Player login
+loginPlayerSubmit.onclick = ()=>{
+  const name = document.getElementById('playerName').value.trim();
+  const pass = document.getElementById('playerPassword').value.trim();
+  if(pass !== "POLO FAMILY"){ loginError.innerText="❌ كلمة المرور خاطئة"; return;}
+  if(name===""){ loginError.innerText="❌ الرجاء إدخال الاسم"; return;}
+  playerNameVal = name;
+  loginPage.style.display='none';
+  gamePage.style.display='block';
+  displayName.innerText = name;
+  socket.emit('playerJoin',{name});
+}
 
-  <div id="images">
-    <div class="image-holder">
-      <img id="leftImg" src="">
-    </div>
-    <div class="image-holder">
-      <img id="rightImg" src="">
-    </div>
-  </div>
+// Admin login
+loginAdminSubmit.onclick = ()=>{
+  const name = document.getElementById('adminName').value.trim();
+  const pass = document.getElementById('adminPassword').value.trim();
+  if(pass !== "ADMINPOLO"){ adminError.innerText="❌ كلمة مرور الأدمن خاطئة"; return;}
+  isAdmin = true;
+  playerNameVal = name;
+  loginPage.style.display='none';
+  gamePage.style.display='block';
+  displayName.innerText = name;
+  adminControls.style.display='block';
+  socket.emit('adminJoin',{name});
+}
 
-  <div id="playerList"></div>
-  <div id="roundResults" style="display:none;"></div>
-</div>
+// Admin starts round
+startRoundBtn.onclick = ()=>{ socket.emit('startRound', {round: currentRound}); }
+stopRoundBtn.onclick = ()=>{ socket.emit('stopRound'); }
 
-<script src="client.js"></script>
-</body>
-</html>
+// Handle image clicks
+[leftImg,rightImg].forEach(img=>{
+  img.onclick = (e)=>{
+    const rect = e.target.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    socket.emit('click',{x:clickX, y:clickY, player:playerNameVal, round:currentRound});
+  }
+});
+
+// Socket events
+socket.on('updatePlayers',(players)=>{
+  playerListEl.innerHTML = "<h3>اللاعبون المتصلون:</h3>";
+  players.forEach(p=>{
+    playerListEl.innerHTML += `<div>${p.name} - نقاط: ${p.score}</div>`;
+  });
+});
+
+socket.on('startRoundClient', ({round, leftImage, rightImage, differences})=>{
+  currentRound = round;
+  roundResultsEl.style.display='none';
+  leftImg.src = leftImage;
+  rightImg.src = rightImage;
+  window.differences = differences; // save for marking
+  startRoundTimer();
+});
+
+socket.on('markDifference', ({x,y})=>{
+  const mark = document.createElement('div');
+  mark.className='marker';
+  mark.style.left=x+'px';
+  mark.style.top=y+'px';
+  mark.style.width='20px';
+  mark.style.height='20px';
+  document.querySelector('#images').appendChild(mark);
+  setTimeout(()=>mark.remove(),1000);
+});
+
+socket.on('showResults', (players)=>{
+  clearInterval(roundTimer);
+  roundResultsEl.style.display='block';
+  leftImg.src=''; rightImg.src='';
+  timerEl.innerText='';
+  let html = `<h3>نتائج الجولة ${currentRound}</h3><table><tr><th>الترتيب</th><th>اللاعب</th><th>النقاط</th></tr>`;
+  players.sort((a,b)=>b.score-a.score).forEach((p,i)=>{
+    html += `<tr><td>${i+1}</td><td>${p.name}</td><td>${p.score}</td></tr>`;
+  });
+  html += "</table>";
+  roundResultsEl.innerHTML = html;
+  // Next round after 10s
+  setTimeout(()=>{
+    if(currentRound<maxRounds && !isAdmin) return;
+    socket.emit('startRound',{round:currentRound+1});
+  },10000);
+});
+
+// Round timer
+function startRoundTimer(){
+  roundTime = 15;
+  timerEl.innerText = roundTime;
+  clearInterval(roundTimer);
+  roundTimer = setInterval(()=>{
+    roundTime--;
+    timerEl.innerText = roundTime;
+    if(roundTime<=0){
+      clearInterval(roundTimer);
+      socket.emit('endRound',{round:currentRound});
+    }
+  },1000);
+}
