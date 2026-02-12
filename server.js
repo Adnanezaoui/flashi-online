@@ -1,95 +1,93 @@
 const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
 
 app.use(express.static('public'));
 
-const PORT = process.env.PORT || 3000;
+let players = []; // {id, name, totalScore, roundScore}
+let roundActive = false;
+let roundTime = 15;
+let timerInterval = null;
 
-// --------------------
-// Game State
-// --------------------
-let players = [];
-let currentLevel = 0;
-let gameActive = false;
-let roundInterval = null;
-let timeLeft = 15;
-
-// --------------------
-// Images and differences
-// --------------------
-const LEVELS = [
-  {
-    left: "https://i.imgur.com/qn4Vnkp.jpg", // غرفة
-    right: "https://i.imgur.com/qn4Vnkp_diff.jpg",
-    diffs: [{x:0.2,y:0.3},{x:0.5,y:0.6},{x:0.7,y:0.2}]
-  },
-  {
-    left: "https://i.imgur.com/NXh1uKX.jpg", // صالة
-    right: "https://i.imgur.com/NXh1uKX_diff.jpg",
-    diffs: [{x:0.3,y:0.5},{x:0.6,y:0.4},{x:0.8,y:0.7},{x:0.1,y:0.2}]
-  },
-  {
-    left: "https://i.imgur.com/ABcD123.jpg", // طبيعة
-    right: "https://i.imgur.com/ABcD123_diff.jpg",
-    diffs: [{x:0.25,y:0.25},{x:0.5,y:0.5},{x:0.75,y:0.75},{x:0.1,y:0.8},{x:0.9,y:0.2}]
-  }
-  // أضف المزيد حسب الحاجة
+// -----------------
+// صور جاهزة حقيقية
+const images = [
+  {left:'https://i.imgur.com/1.jpg', right:'https://i.imgur.com/1.jpg', diff:5},
+  {left:'https://i.imgur.com/2.jpg', right:'https://i.imgur.com/2.jpg', diff:5},
+  {left:'https://i.imgur.com/3.jpg', right:'https://i.imgur.com/3.jpg', diff:5},
+  {left:'https://i.imgur.com/4.jpg', right:'https://i.imgur.com/4.jpg', diff:6},
+  {left:'https://i.imgur.com/5.jpg', right:'https://i.imgur.com/5.jpg', diff:6},
+  {left:'https://i.imgur.com/6.jpg', right:'https://i.imgur.com/6.jpg', diff:7},
+  {left:'https://i.imgur.com/7.jpg', right:'https://i.imgur.com/7.jpg', diff:7},
+  {left:'https://i.imgur.com/8.jpg', right:'https://i.imgur.com/8.jpg', diff:8},
+  {left:'https://i.imgur.com/9.jpg', right:'https://i.imgur.com/9.jpg', diff:8}
 ];
+let currentImageIndex = 0;
 
-// --------------------
-// Socket.io
-// --------------------
-io.on('connection', socket => {
-  console.log(`Player connected: ${socket.id}`);
+// -----------------
+io.on('connection', socket=>{
+  console.log('A user connected', socket.id);
 
-  socket.on('joinGame', ({name}) => {
-    players.push({ id: socket.id, name, score:0 });
+  socket.on('joinGame', ({name})=>{
+    let player = players.find(p=>p.id===socket.id);
+    if(!player) {
+      players.push({id:socket.id,name,totalScore:0,roundScore:0});
+    }
     io.emit('updatePlayers', players);
   });
 
-  socket.on('foundDiff', () => {
-    const player = players.find(p => p.id === socket.id);
-    if(player && gameActive) {
-      player.score += 1;
+  socket.on('foundDiff', ()=>{
+    if(!roundActive) return;
+    let player = players.find(p=>p.id===socket.id);
+    if(player){
+      player.roundScore += 1;
+      player.totalScore += 1;
       io.emit('updatePlayers', players);
     }
   });
 
-  socket.on('startRound', () => {
-    if(gameActive) return;
-    gameActive = true;
-    timeLeft = 15;
-
-    io.emit('roundStart', { level: currentLevel, image: LEVELS[currentLevel], time: timeLeft });
-
-    roundInterval = setInterval(()=>{
-      timeLeft--;
-      io.emit('timer', timeLeft);
-
-      if(timeLeft <= 0){
-        clearInterval(roundInterval);
-        gameActive = false;
-
-        io.emit('roundEnd', players.sort((a,b)=>b.score - a.score));
-
-        setTimeout(()=>{
-          currentLevel = (currentLevel + 1) % LEVELS.length;
-          players.forEach(p=>p.score = 0);
-          io.emit('updatePlayers', players);
-          io.emit('nextRoundReady');
-        }, 5000);
-      }
-    }, 1000);
+  socket.on('startRound', ()=>{
+    if(roundActive) return;
+    startRound();
   });
 
-  socket.on('disconnect', () => {
-    players = players.filter(p=>p.id !== socket.id);
+  socket.on('stopRound', ()=>{
+    clearInterval(timerInterval);
+    roundActive=false;
+  });
+
+  socket.on('disconnect', ()=>{
+    players = players.filter(p=>p.id!==socket.id);
     io.emit('updatePlayers', players);
   });
 });
 
-server.listen(PORT, ()=>console.log(`Server running on port ${PORT}`));
+function startRound(){
+  roundActive = true;
+  players.forEach(p=>p.roundScore=0);
+  let img = images[currentImageIndex % images.length];
+  io.emit('roundStart',{image:img,time:roundTime});
+  let timeLeft = roundTime;
+
+  timerInterval = setInterval(()=>{
+    timeLeft--;
+    io.emit('timer', timeLeft);
+    if(timeLeft <=0){
+      clearInterval(timerInterval);
+      roundActive=false;
+      // نهاية الجولة
+      io.emit('roundEnd', players.map(p=>{
+        return {name:p.name, roundScore:p.roundScore, totalScore:p.totalScore};
+      }));
+      // 10 ثوان لعرض النتائج
+      setTimeout(()=>{
+        currentImageIndex++;
+        io.emit('nextRoundReady');
+        startRound();
+      },10000);
+    }
+  },1000);
+}
+
+http.listen(3000, ()=>console.log('Server running on http://localhost:3000'));
