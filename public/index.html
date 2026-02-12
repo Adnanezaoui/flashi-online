@@ -13,6 +13,7 @@
             font-family: 'Cairo', 'Segoe UI', sans-serif;
         }
         body {
+
             background: linear-gradient(145deg, #0a1c23 0%, #06242e 100%);
             display: flex;
             justify-content: center;
@@ -297,7 +298,27 @@
     </style>
 </head>
 <body>
-    <div class="game-wrapper">
+    <div id="poloLoginPage" style="text-align:center; color:white;">
+    <h1 style="font-size:60px; margin-bottom:30px;">🔥 POLO 🔥</h1>
+    
+    <input type="text" id="poloPlayerName" 
+           placeholder="أدخل اسمك"
+           style="padding:15px 25px; border-radius:40px; border:none; font-size:18px; margin-bottom:15px; width:250px;"><br>
+
+    <input type="password" id="poloPassword" 
+           placeholder="كلمة المرور"
+           style="padding:15px 25px; border-radius:40px; border:none; font-size:18px; width:250px;"><br><br>
+
+    <button onclick="enterPolo()" 
+            style="padding:15px 40px; border-radius:40px; border:none; font-size:20px; background:#fecb57; cursor:pointer;">
+        دخول
+    </button>
+
+    <p id="poloError" style="color:red; margin-top:15px;"></p>
+</div>
+
+    <div class="game-wrapper" id="mainGame" style="display:none;">
+
         <!-- اللعبة الرئيسية -->
         <div class="main-game">
             <div class="flashi-header">
@@ -921,6 +942,36 @@
         // تفعيل الدردشة للزوار
         chatInput.disabled = false;
         chatInput.placeholder = 'اكتب رسالتك هنا...';
+    // ------------------------------------------------------
+// صفحة الدخول الخاصة بفريق POLO
+// ------------------------------------------------------
+
+function enterPolo() {
+    const name = document.getElementById("poloPlayerName").value.trim();
+    const password = document.getElementById("poloPassword").value.trim();
+
+    if (password !== "POLO FAMILY") {
+        document.getElementById("poloError").innerText = "❌ كلمة المرور غير صحيحة";
+        return;
+    }
+
+    if (name === "") {
+        document.getElementById("poloError").innerText = "❌ الرجاء إدخال الاسم";
+        return;
+    }
+
+    // تعيين اسم اللاعب
+    playerName = name;
+    document.getElementById("playerNameInput").value = name;
+    document.getElementById("playerNameSpan").innerText = name;
+
+    // إخفاء صفحة الدخول
+    document.getElementById("poloLoginPage").style.display = "none";
+
+    // إظهار اللعبة
+    document.getElementById("mainGame").style.display = "flex";
+}
+
     </script>
 </body>
 </html>
