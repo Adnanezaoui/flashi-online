@@ -17,15 +17,18 @@ let roundActive = false;
 let roundTime = 20;
 let maxRounds = 15;
 
+/* IMAGE PROXY (100% WORKS ON RENDER) */
+app.get("/image", (req, res) => {
+    const width = 800;
+    const height = 500;
+    const seed = Date.now();
+    res.redirect(`https://picsum.photos/seed/${seed}/${width}/${height}`);
+});
+
 function getDifficulty(round){
     if(round <= 5) return "easy";
     if(round <= 10) return "medium";
     return "hard";
-}
-
-function generateImage(){
-    const seed = Date.now(); 
-    return `https://picsum.photos/800/500?random=${seed}`;
 }
 
 function startRound(){
@@ -34,11 +37,9 @@ function startRound(){
 
     Object.values(players).forEach(p => p.roundScore = 0);
 
-    const imageURL = generateImage();
-
     io.emit("roundStarted", {
         round: roundNumber,
-        image: imageURL,
+        image: `/image?${Date.now()}`,
         difficulty: getDifficulty(roundNumber),
         time: roundTime
     });
@@ -61,6 +62,15 @@ function endRound(){
     }
 }
 
+function sendPlayers(){
+    io.emit("playersUpdate",
+        Object.values(players).map(p=>({
+            name:p.name,
+            totalScore:p.totalScore
+        }))
+    );
+}
+
 io.on("connection", socket => {
 
     socket.on("joinGame", name => {
@@ -69,21 +79,16 @@ io.on("connection", socket => {
             totalScore: 0,
             roundScore: 0
         };
-
         sendPlayers();
     });
 
     socket.on("scorePoint", ()=>{
         if(!roundActive) return;
-
         const p = players[socket.id];
         if(!p) return;
-
-        if(p.roundScore >= 25) return; // anti spam
-
+        if(p.roundScore >= 25) return; // anti cheat
         p.roundScore++;
         p.totalScore++;
-
         sendPlayers();
     });
 
@@ -99,15 +104,6 @@ io.on("connection", socket => {
         sendPlayers();
     });
 });
-
-function sendPlayers(){
-    io.emit("playersUpdate",
-        Object.values(players).map(p=>({
-            name: p.name,
-            totalScore: p.totalScore
-        }))
-    );
-}
 
 server.listen(PORT, ()=>{
     console.log("Server running on port " + PORT);
