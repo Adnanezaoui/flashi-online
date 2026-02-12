@@ -15,73 +15,81 @@ const PORT = process.env.PORT || 3000;
 let players = [];
 let currentLevel = 0;
 let gameActive = false;
-let timeLeft = 15;
 let roundInterval = null;
+let timeLeft = 15;
 
-const TOTAL_LEVELS = 20; // توليد 20 صورة مختلفة للعبة
-const IMAGES = [
-    { left: "https://i.imgur.com/1.jpg", right: "https://i.imgur.com/1_diff.jpg", diffs: [{x:0.2,y:0.3},{x:0.7,y:0.5}] },
-    { left: "https://i.imgur.com/2.jpg", right: "https://i.imgur.com/2_diff.jpg", diffs: [{x:0.4,y:0.4},{x:0.6,y:0.6}] },
-    { left: "https://i.imgur.com/3.jpg", right: "https://i.imgur.com/3_diff.jpg", diffs: [{x:0.3,y:0.7},{x:0.8,y:0.2}] }
-    // أضف 17 صورة أخرى بنفس النمط
+// --------------------
+// Images and differences
+// --------------------
+const LEVELS = [
+  {
+    left: "https://i.imgur.com/qn4Vnkp.jpg", // غرفة
+    right: "https://i.imgur.com/qn4Vnkp_diff.jpg",
+    diffs: [{x:0.2,y:0.3},{x:0.5,y:0.6},{x:0.7,y:0.2}]
+  },
+  {
+    left: "https://i.imgur.com/NXh1uKX.jpg", // صالة
+    right: "https://i.imgur.com/NXh1uKX_diff.jpg",
+    diffs: [{x:0.3,y:0.5},{x:0.6,y:0.4},{x:0.8,y:0.7},{x:0.1,y:0.2}]
+  },
+  {
+    left: "https://i.imgur.com/ABcD123.jpg", // طبيعة
+    right: "https://i.imgur.com/ABcD123_diff.jpg",
+    diffs: [{x:0.25,y:0.25},{x:0.5,y:0.5},{x:0.75,y:0.75},{x:0.1,y:0.8},{x:0.9,y:0.2}]
+  }
+  // أضف المزيد حسب الحاجة
 ];
 
 // --------------------
 // Socket.io
 // --------------------
 io.on('connection', socket => {
-    console.log(`Player connected: ${socket.id}`);
+  console.log(`Player connected: ${socket.id}`);
 
-    // اللاعب يدخل
-    socket.on('joinGame', ({name}) => {
-        players.push({ id: socket.id, name, score:0 });
-        io.emit('updatePlayers', players);
-        console.log(players.map(p=>p.name));
-    });
+  socket.on('joinGame', ({name}) => {
+    players.push({ id: socket.id, name, score:0 });
+    io.emit('updatePlayers', players);
+  });
 
-    // نقر اللاعب على اختلاف
-    socket.on('foundDiff', () => {
-        const player = players.find(p => p.id === socket.id);
-        if(player) player.score += 1;
-        io.emit('updatePlayers', players);
-    });
+  socket.on('foundDiff', () => {
+    const player = players.find(p => p.id === socket.id);
+    if(player && gameActive) {
+      player.score += 1;
+      io.emit('updatePlayers', players);
+    }
+  });
 
-    // بدء الجولة (الأدمن فقط)
-    socket.on('startRound', () => {
-        if(gameActive) return;
-        gameActive = true;
-        timeLeft = 15;
-        io.emit('roundStart', { level: currentLevel, image: IMAGES[currentLevel], time: timeLeft });
+  socket.on('startRound', () => {
+    if(gameActive) return;
+    gameActive = true;
+    timeLeft = 15;
 
-        roundInterval = setInterval(()=>{
-            timeLeft--;
-            io.emit('timer', timeLeft);
+    io.emit('roundStart', { level: currentLevel, image: LEVELS[currentLevel], time: timeLeft });
 
-            if(timeLeft <= 0){
-                clearInterval(roundInterval);
-                gameActive = false;
+    roundInterval = setInterval(()=>{
+      timeLeft--;
+      io.emit('timer', timeLeft);
 
-                // إرسال نتائج الجولة
-                io.emit('roundEnd', players.sort((a,b)=>b.score-a.score));
+      if(timeLeft <= 0){
+        clearInterval(roundInterval);
+        gameActive = false;
 
-                // الانتظار 5 ثواني ثم الجولة التالية
-                setTimeout(()=>{
-                    currentLevel = (currentLevel + 1) % IMAGES.length;
-                    players.forEach(p=>p.score=0); // إعادة نقاط الجولة
-                    io.emit('updatePlayers', players);
-                    io.emit('nextRoundReady');
-                }, 5000);
-            }
-        }, 1000);
-    });
+        io.emit('roundEnd', players.sort((a,b)=>b.score - a.score));
 
-    // Disconnect
-    socket.on('disconnect', () => {
-        players = players.filter(p=>p.id !== socket.id);
-        io.emit('updatePlayers', players);
-        console.log(`Player disconnected: ${socket.id}`);
-    });
+        setTimeout(()=>{
+          currentLevel = (currentLevel + 1) % LEVELS.length;
+          players.forEach(p=>p.score = 0);
+          io.emit('updatePlayers', players);
+          io.emit('nextRoundReady');
+        }, 5000);
+      }
+    }, 1000);
+  });
+
+  socket.on('disconnect', () => {
+    players = players.filter(p=>p.id !== socket.id);
+    io.emit('updatePlayers', players);
+  });
 });
 
-// --------------------
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, ()=>console.log(`Server running on port ${PORT}`));
