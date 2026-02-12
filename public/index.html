@@ -4,15 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>POLO - لعبة اختلاف الصور</title>
+<script src="/socket.io/socket.io.js"></script>
 <style>
 body { font-family:'Cairo',sans-serif; background:#0a1c23; color:white; text-align:center; margin:0; padding:0;}
 button { padding:10px 20px; margin:5px; border-radius:10px; font-size:16px; cursor:pointer; }
 #gamePage { display:none; }
 #loginPage { margin-top:50px;}
-#images { margin-top:20px; position: relative; display: flex; justify-content: center; gap: 20px;}
-.image-holder { position: relative; }
+#playerList, #roundResults { margin-top:20px; text-align:right; max-width:500px; margin-left:auto; margin-right:auto;}
+#images { margin-top:20px; position:relative;}
+.image-holder { display:inline-block; margin:10px; position:relative;}
 img { width:300px; height:200px; cursor:pointer; border:3px solid #fff; border-radius:10px; }
-.mark { position:absolute; border:3px solid lime; border-radius:50%; width:30px; height:30px; transform: translate(-50%,-50%); pointer-events:none; }
+.marker { position:absolute; border:3px solid red; border-radius:50%; pointer-events:none; animation:fadeout 1s forwards; }
+@keyframes fadeout { 0% {opacity:1;} 100% {opacity:0;} }
 table { width:80%; margin:auto; border-collapse: collapse; margin-top:10px;}
 table, th, td { border:1px solid #fff; padding:8px;}
 th { background:#1e4e5c; }
@@ -67,167 +70,6 @@ td { background:#163a47; }
   <div id="roundResults" style="display:none;"></div>
 </div>
 
-<script>
-let isAdmin = false;
-let playerName = '';
-let roundTime = 15;
-let timerInterval = null;
-let gameActive = false;
-let currentLevel = 0;
-let totalRounds = 300; // عدد الصور
-let rounds = [];
-let differencesCount = 5; // اختلافات لكل صورة (يمكن تعديل الصعوبة)
-let playerScores = {};
-let marks = [];
-
-// توليد صور وجعلها متطابقة + اختلافات عشوائية
-function generateRounds() {
-    for(let i=0;i<totalRounds;i++){
-        let imgUrl = `https://picsum.photos/seed/${i}/300/200`;
-        let diffs = [];
-        for(let j=0;j<differencesCount;j++){
-            diffs.push({x: Math.random(), y: Math.random(), found:false});
-        }
-        rounds.push({img: imgUrl, diffs});
-    }
-}
-
-// عرض الجولة الحالية
-function loadRound(index){
-    currentLevel = index;
-    const round = rounds[currentLevel];
-    document.getElementById('leftImg').src = round.img;
-    document.getElementById('rightImg').src = round.img;
-    clearMarks();
-}
-
-// حذف علامات الاختلاف القديمة
-function clearMarks(){
-    marks.forEach(m => m.remove());
-    marks = [];
-}
-
-// بدء العد التنازلي
-function startTimer(){
-    roundTime = 15;
-    document.getElementById('timer').innerText = roundTime;
-    timerInterval = setInterval(()=>{
-        if(!gameActive) return;
-        roundTime--;
-        document.getElementById('timer').innerText = roundTime;
-        if(roundTime <=0){
-            endRound();
-        }
-    },1000);
-}
-
-// إنهاء الجولة وعرض النتائج
-function endRound(){
-    gameActive=false;
-    clearInterval(timerInterval);
-    showRoundResults();
-}
-
-// عرض النتائج لكل اللاعبين
-function showRoundResults(){
-    let resultsDiv = document.getElementById('roundResults');
-    let html = '<h3>نتائج الجولة '+(currentLevel+1)+'</h3><table><tr><th>اللاعب</th><th>النقاط</th></tr>';
-    for(const p in playerScores){
-        html+=`<tr><td>${p}</td><td>${playerScores[p]}</td></tr>`;
-    }
-    html+='</table>';
-    resultsDiv.innerHTML = html;
-    resultsDiv.style.display='block';
-    document.getElementById('images').style.display='none';
-
-    setTimeout(()=>{
-        resultsDiv.style.display='none';
-        document.getElementById('images').style.display='flex';
-        if(currentLevel+1<rounds.length){
-            loadRound(currentLevel+1);
-            if(isAdmin) gameActive=true;
-            startTimer();
-        }
-    },10000);
-}
-
-// تسجيل النقاط عند الضغط على الصورة
-function imageClick(e){
-    if(!gameActive) return;
-    const rect = e.target.getBoundingClientRect();
-    const round = rounds[currentLevel];
-    for(let d of round.diffs){
-        if(d.found) continue;
-        const dx = (e.clientX - rect.left)/rect.width;
-        const dy = (e.clientY - rect.top)/rect.height;
-        if(Math.abs(dx - d.x)<0.05 && Math.abs(dy - d.y)<0.05){
-            d.found=true;
-            // عمل علامة خضراء
-            let mark = document.createElement('div');
-            mark.className='mark';
-            mark.style.left = (dx*100)+'%';
-            mark.style.top = (dy*100)+'%';
-            e.target.parentElement.appendChild(mark);
-            marks.push(mark);
-            // إضافة نقاط
-            if(!playerScores[playerName]) playerScores[playerName]=0;
-            playerScores[playerName]++;
-        }
-    }
-}
-
-// أحداث تسجيل الدخول
-document.getElementById('playerLoginBtn').onclick = ()=>{
-    document.getElementById('playerForm').style.display='block';
-    document.getElementById('adminForm').style.display='none';
-}
-document.getElementById('adminLoginBtn').onclick = ()=>{
-    document.getElementById('adminForm').style.display='block';
-    document.getElementById('playerForm').style.display='none';
-}
-document.getElementById('loginPlayerSubmit').onclick = ()=>{
-    let name = document.getElementById('playerName').value.trim();
-    let pass = document.getElementById('playerPassword').value.trim();
-    if(pass !== 'POLO FAMILY'){ document.getElementById('loginError').innerText='كلمة مرور خاطئة'; return;}
-    if(name===''){ document.getElementById('loginError').innerText='ادخل اسمك'; return;}
-    playerName=name;
-    document.getElementById('displayName').innerText=playerName;
-    document.getElementById('loginPage').style.display='none';
-    document.getElementById('gamePage').style.display='block';
-    loadRound(0);
-    gameActive=true;
-    startTimer();
-}
-document.getElementById('loginAdminSubmit').onclick = ()=>{
-    let name = document.getElementById('adminName').value.trim();
-    let pass = document.getElementById('adminPassword').value.trim();
-    if(pass !== 'ADMINPOLO'){ document.getElementById('adminError').innerText='كلمة مرور خاطئة'; return;}
-    playerName=name;
-    isAdmin=true;
-    document.getElementById('displayName').innerText=playerName+' (Admin)';
-    document.getElementById('loginPage').style.display='none';
-    document.getElementById('gamePage').style.display='block';
-    document.getElementById('adminControls').style.display='block';
-    loadRound(0);
-}
-
-// أحداث الادمن
-document.getElementById('startRoundBtn').onclick = ()=>{
-    gameActive=true;
-    startTimer();
-}
-document.getElementById('stopRoundBtn').onclick = ()=>{
-    gameActive=false;
-    clearInterval(timerInterval);
-}
-
-// أحداث الضغط على الصور
-document.getElementById('leftImg').onclick=imageClick;
-document.getElementById('rightImg').onclick=imageClick;
-
-// توليد الصور والجولات
-generateRounds();
-</script>
-
+<script src="client.js"></script>
 </body>
 </html>
