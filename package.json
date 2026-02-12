@@ -1,7 +1,6 @@
 {
-  "name": "polo-game",
+  "name": "flashi-game",
   "version": "1.0.0",
-  "description": "POLO Real Time Game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
