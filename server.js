@@ -1,76 +1,87 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static("public"));
+app.use(express.static('public'));
 
-let players = {};
-let adminId = null;
-let gameStarted = false;
-let currentRound = 0;
+const PORT = process.env.PORT || 3000;
 
-io.on("connection", (socket) => {
+// --------------------
+// Game State
+// --------------------
+let players = [];
+let currentLevel = 0;
+let gameActive = false;
+let timeLeft = 15;
+let roundInterval = null;
 
-  socket.on("login", ({ name, password }) => {
+const TOTAL_LEVELS = 20; // توليد 20 صورة مختلفة للعبة
+const IMAGES = [
+    { left: "https://i.imgur.com/1.jpg", right: "https://i.imgur.com/1_diff.jpg", diffs: [{x:0.2,y:0.3},{x:0.7,y:0.5}] },
+    { left: "https://i.imgur.com/2.jpg", right: "https://i.imgur.com/2_diff.jpg", diffs: [{x:0.4,y:0.4},{x:0.6,y:0.6}] },
+    { left: "https://i.imgur.com/3.jpg", right: "https://i.imgur.com/3_diff.jpg", diffs: [{x:0.3,y:0.7},{x:0.8,y:0.2}] }
+    // أضف 17 صورة أخرى بنفس النمط
+];
 
-    if (password !== "POLO FAMILY") {
-      socket.emit("loginError");
-      return;
-    }
+// --------------------
+// Socket.io
+// --------------------
+io.on('connection', socket => {
+    console.log(`Player connected: ${socket.id}`);
 
-    if (!adminId) {
-      adminId = socket.id; // أول لاعب هو الأدمن
-    }
+    // اللاعب يدخل
+    socket.on('joinGame', ({name}) => {
+        players.push({ id: socket.id, name, score:0 });
+        io.emit('updatePlayers', players);
+        console.log(players.map(p=>p.name));
+    });
 
-    players[socket.id] = {
-      name,
-      score: 0
-    };
+    // نقر اللاعب على اختلاف
+    socket.on('foundDiff', () => {
+        const player = players.find(p => p.id === socket.id);
+        if(player) player.score += 1;
+        io.emit('updatePlayers', players);
+    });
 
-    io.emit("updatePlayers", players);
-    io.emit("adminUpdate", adminId);
-  });
+    // بدء الجولة (الأدمن فقط)
+    socket.on('startRound', () => {
+        if(gameActive) return;
+        gameActive = true;
+        timeLeft = 15;
+        io.emit('roundStart', { level: currentLevel, image: IMAGES[currentLevel], time: timeLeft });
 
-  socket.on("startGame", () => {
-    if (socket.id === adminId) {
-      gameStarted = true;
-      currentRound = 1;
-      io.emit("countdown", 10);
-    }
-  });
+        roundInterval = setInterval(()=>{
+            timeLeft--;
+            io.emit('timer', timeLeft);
 
-  socket.on("nextRound", () => {
-    if (socket.id === adminId) {
-      currentRound++;
-      io.emit("countdown", 10);
-    }
-  });
+            if(timeLeft <= 0){
+                clearInterval(roundInterval);
+                gameActive = false;
 
-  socket.on("addPoint", () => {
-    if (players[socket.id]) {
-      players[socket.id].score++;
-      io.emit("updatePlayers", players);
-    }
-  });
+                // إرسال نتائج الجولة
+                io.emit('roundEnd', players.sort((a,b)=>b.score-a.score));
 
-  socket.on("stopGame", () => {
-    if (socket.id === adminId) {
-      gameStarted = false;
-      currentRound = 0;
-      io.emit("gameStopped");
-    }
-  });
+                // الانتظار 5 ثواني ثم الجولة التالية
+                setTimeout(()=>{
+                    currentLevel = (currentLevel + 1) % IMAGES.length;
+                    players.forEach(p=>p.score=0); // إعادة نقاط الجولة
+                    io.emit('updatePlayers', players);
+                    io.emit('nextRoundReady');
+                }, 5000);
+            }
+        }, 1000);
+    });
 
-  socket.on("disconnect", () => {
-    delete players[socket.id];
-    if (socket.id === adminId) adminId = null;
-    io.emit("updatePlayers", players);
-  });
-
+    // Disconnect
+    socket.on('disconnect', () => {
+        players = players.filter(p=>p.id !== socket.id);
+        io.emit('updatePlayers', players);
+        console.log(`Player disconnected: ${socket.id}`);
+    });
 });
 
-server.listen(process.env.PORT || 3000);
+// --------------------
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
